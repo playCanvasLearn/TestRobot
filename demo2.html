@@ -131,6 +131,12 @@
         let settings;
         let singleStepMode = false;
         let sizeOfNextStep = 0;
+        // 上一次路径段索引（用于“段触发”，避免每帧重复切换动作）
+        let prevSegmentIndex = -1;
+        // 冻结位移（播放一次性动作期间暂停移动插值，动作完成后恢复）
+        let holdMovement = false;
+        // 当前等待完成的一次性动作（转身/拿取/停等）
+        let waitAction = null;
 
         let animationFrameCounts = {
             stop: 0,
@@ -511,41 +517,51 @@
                         action.setLoop(THREE.LoopOnce);   // 只播放一次
                     }
                 });
+                /*
+                                if (walkAction) {
+                                    walkAction.setDuration(5);  // 5秒内完成
+                                }
 
-                if (walkAction) {
-                    walkAction.setDuration(5);  // 5秒内完成
-                }
+                                if (takeAction) {
+                                    takeAction.setDuration(5);  // 5秒内完成
+                                }
 
-                if (takeAction) {
-                    takeAction.setDuration(5);  // 5秒内完成
-                }
+                                if (stopAction) {
+                                    stopAction.setDuration(5);  // 5秒内完成
+                                }
 
-                if (stopAction) {
-                    stopAction.setDuration(5);  // 5秒内完成
-                }
-
-                if (trunLeftAction) {
-                    trunLeftAction.setDuration(5);  // 5秒内完成
-                }
-                if (trunRightAction) {
-                    trunRightAction.setDuration(5); // 5秒内完成
-                }
+                                if (trunLeftAction) {
+                                    trunLeftAction.setDuration(5);  // 5秒内完成
+                                }
+                                if (trunRightAction) {
+                                    trunRightAction.setDuration(5); // 5秒内完成
+                                }*/
 
                 // 初始化当前动作为行走动画
                 currentAction = walkAction;
                 walkAction.play();
                 actions = [walkAction, takeAction, stopAction, trunLeftAction, trunRightAction];
                 createPanel();
+                if (mixer) {
+                    // 监听一次性动作完成：解除冻结并淡入回“行走”，保持流程连贯
+                    mixer.addEventListener('finished', (event) => {
+                        if (waitAction && event.action === waitAction) {
+                            holdMovement = false;
+                            waitAction = null;
+                            transitionTo(walkAction, getCrossFadeDuration());
+                        }
+                    });
+                }
             });
         }
-        
+
         function setWeight(action, weight) {
             if (!action) return;
             action.enabled = true;
             action.setEffectiveTimeScale(1);
             action.setEffectiveWeight(weight);
         }
-        
+
         function getWeightForAction(action) {
             if (!settings) return 1;
             if (action === walkAction) return settings['walk weight'];
@@ -555,8 +571,9 @@
             if (action === stopAction) return settings['stop weight'];
             return 1;
         }
-        
+
         function transitionTo(endAction, duration = 0.5) {
+            // 统一的动作切换入口：重置目标动作，设置权重，使用 crossFadeTo 做淡入淡出
             if (!endAction) return;
             if (!currentAction) {
                 endAction.reset().play();
@@ -565,12 +582,11 @@
             }
             if (currentAction === endAction) return;
             endAction.reset().play();
-            const targetWeight = getWeightForAction(endAction);
-            setWeight(endAction, targetWeight);
+            setWeight(endAction, getWeightForAction(endAction));
             currentAction.crossFadeTo(endAction, duration, true);
             currentAction = endAction;
         }
-        
+
         function createPanel() {
             const panel = new GUI({ width: 310 });
             const folder1 = panel.addFolder('Visibility');
@@ -578,7 +594,7 @@
             const folder4 = panel.addFolder('Crossfading');
             const folder5 = panel.addFolder('Blend Weights');
             const folder6 = panel.addFolder('General Speed');
-            
+
             settings = {
                 'show robot': true,
                 'show map': true,
@@ -594,14 +610,14 @@
                 'stop weight': 0.4,
                 'modify time scale': 1.0
             };
-            
+
             folder1.add(settings, 'show robot').onChange(v => { if (robot) robot.visible = v; });
             folder1.add(settings, 'show map').onChange(v => { if (map) map.visible = v; });
-            
+
             folder3.add(settings, 'pause/continue');
             folder3.add(settings, 'make single step');
             folder3.add(settings, 'modify step size', 0.01, 0.1, 0.001);
-            
+
             folder4.add(settings, 'use default duration');
             folder4.add(settings, 'set custom duration', 0, 10, 0.01);
             folder4.add({ f: () => crossTo(walkAction) }, 'f').name('to walk');
@@ -609,31 +625,31 @@
             folder4.add({ f: () => crossTo(trunLeftAction) }, 'f').name('to turn left');
             folder4.add({ f: () => crossTo(trunRightAction) }, 'f').name('to turn right');
             folder4.add({ f: () => crossTo(stopAction) }, 'f').name('to stop');
-            
+
             folder5.add(settings, 'walk weight', 0, 1, 0.01).listen().onChange(w => setWeight(walkAction, w));
             folder5.add(settings, 'take weight', 0, 1, 0.01).listen().onChange(w => setWeight(takeAction, w));
             folder5.add(settings, 'turn left weight', 0, 1, 0.01).listen().onChange(w => setWeight(trunLeftAction, w));
             folder5.add(settings, 'turn right weight', 0, 1, 0.01).listen().onChange(w => setWeight(trunRightAction, w));
             folder5.add(settings, 'stop weight', 0, 1, 0.01).listen().onChange(w => setWeight(stopAction, w));
-            
+
             folder6.add(settings, 'modify time scale', 0, 1.5, 0.01).onChange(modifyTimeScale);
-            
+
             folder1.open();
             folder3.open();
             folder4.open();
             folder5.open();
             folder6.open();
         }
-        
+
         function crossTo(action) {
             const duration = settings['use default duration'] ? settings['set custom duration'] : settings['set custom duration'];
             transitionTo(action, duration);
         }
-        
+
         function modifyTimeScale(speed) {
             if (mixer) mixer.timeScale = speed;
         }
-        
+
         function pauseContinue() {
             if (singleStepMode) {
                 singleStepMode = false;
@@ -643,15 +659,15 @@
                 actions[0] && actions[0].paused ? unPauseAllActions() : pauseAllActions();
             }
         }
-        
+
         function pauseAllActions() {
             actions.forEach(a => { if (a) a.paused = true; });
         }
-        
+
         function unPauseAllActions() {
             actions.forEach(a => { if (a) a.paused = false; });
         }
-        
+
         function toSingleStepMode() {
             unPauseAllActions();
             singleStepMode = true;
@@ -682,13 +698,18 @@
         };
         window.addEventListener('click', handleClick);
 
+        function getCrossFadeDuration() {
+            // 过渡时长：优先使用面板设置；没有面板时使用默认值 0.5s
+            return settings && settings['use default duration'] ? settings['set custom duration'] : settings ? settings['set custom duration'] : 0.5;
+        }
 
         function moveSquare(delta) {
-            // if (isPaused) return; // 如果正在暂停则不执行移动逻辑
-
+            // 每段固定 5 秒：按 delta 推进时间；冻结期间不推进（保持原地播放一次性动作）
             const segmentTime = 5;
-            t += delta;
-
+            if (!holdMovement) {
+                t += delta;
+            }
+            // 当前段索引与插值
             const progress = t / segmentTime;
             const currentIndex = Math.floor(progress);
             const currentSegment = currentIndex % positionsAnimation.length;
@@ -696,36 +717,45 @@
             const interpolation = progress - currentIndex;
             const currentPos = positionsAnimation[currentSegment].position;
             const nextPos = positionsAnimation[nextIndex].position;
+            // 位置插值（x、z）
             const x = currentPos.x + (nextPos.x - currentPos.x) * interpolation;
             const z = currentPos.z + (nextPos.z - currentPos.z) * interpolation;
             robot.position.set(x, 0, z);
-
-            // 动画过渡时间（秒）
-            const crossFadeDuration = 0.05;
-
-            // 根据 turn 值播放相应的转向动画
-            if (positionsAnimation[currentSegment].turn === 'trunLeft') {
-                transitionTo(trunLeftAction, crossFadeDuration);
-            } else if (positionsAnimation[currentSegment].turn === 'trunRight') {
-                transitionTo(trunRightAction, crossFadeDuration);
-            } else if (positionsAnimation[currentSegment].turn === 'pause') {
-                transitionTo(takeAction, crossFadeDuration);
-            } else if (positionsAnimation[currentSegment].turn === '') {
-                transitionTo(walkAction, crossFadeDuration);
+            // 段触发：仅在段索引变化时切换动作，避免每帧抖动
+            if (prevSegmentIndex !== currentSegment) {
+                prevSegmentIndex = currentSegment;
+                const crossFadeDuration = getCrossFadeDuration();
+                const turn = positionsAnimation[currentSegment].turn;
+                if (turn === 'trunLeft') {
+                    holdMovement = true;             // 冻结位移
+                    waitAction = trunLeftAction;     // 等待转身完成
+                    transitionTo(trunLeftAction, crossFadeDuration);
+                } else if (turn === 'trunRight') {
+                    holdMovement = true;
+                    waitAction = trunRightAction;
+                    transitionTo(trunRightAction, crossFadeDuration);
+                } else if (turn === 'pause') {
+                    holdMovement = true;
+                    waitAction = takeAction;
+                    transitionTo(takeAction, crossFadeDuration);
+                } else {
+                    // 普通段：恢复位移与行走
+                    holdMovement = false;
+                    waitAction = null;
+                    transitionTo(walkAction, crossFadeDuration);
+                }
             }
-
-            if (Math.abs(nextPos.x - currentPos.x) > 0.01 || Math.abs(nextPos.z - currentPos.z) > 0.01) {
-                robot.lookAt(nextPos.x, 0, nextPos.z);
-            }
-            // 更新机器人标签位置和内容
+            // 朝向平滑插值：使用四元数 slerp 逐步对准下一个目标
+            const dx = nextPos.x - x;
+            const dz = nextPos.z - z;
+            const yaw = Math.atan2(dx, dz);
+            const targetQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, yaw, 0));
+            robot.quaternion.slerp(targetQuat, Math.min(1, 6 * delta));
+            // 标签与门状态更新
             if (robotLabel) {
-                // 设置标签位置在机器人头顶
-                robotLabel.position.set(x, 4, z); // Y轴稍微高于机器人
-                // 更新标签内容
+                robotLabel.position.set(x, 4, z);
                 updateLabelContent(positionsAnimation[currentSegment].showMessage);
             }
-
-            // 判断当前状态并控制门的开合
             updateDoorState(positionsAnimation[currentSegment].showMessage);
         }
 
