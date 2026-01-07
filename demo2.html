@@ -85,6 +85,7 @@
         import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
         import { DRACOLoader } from './js/DRACOLoader.js';
         import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
+        import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
         import * as echarts from 'echarts';
 
         const dracoLoader = new DRACOLoader();
@@ -126,6 +127,10 @@
         let trunRightAction = null;
 
         let currentAction = null;
+        let actions = [];
+        let settings;
+        let singleStepMode = false;
+        let sizeOfNextStep = 0;
 
         let animationFrameCounts = {
             stop: 0,
@@ -529,7 +534,128 @@
                 // 初始化当前动作为行走动画
                 currentAction = walkAction;
                 walkAction.play();
+                actions = [walkAction, takeAction, stopAction, trunLeftAction, trunRightAction];
+                createPanel();
             });
+        }
+        
+        function setWeight(action, weight) {
+            if (!action) return;
+            action.enabled = true;
+            action.setEffectiveTimeScale(1);
+            action.setEffectiveWeight(weight);
+        }
+        
+        function getWeightForAction(action) {
+            if (!settings) return 1;
+            if (action === walkAction) return settings['walk weight'];
+            if (action === takeAction) return settings['take weight'];
+            if (action === trunLeftAction) return settings['turn left weight'];
+            if (action === trunRightAction) return settings['turn right weight'];
+            if (action === stopAction) return settings['stop weight'];
+            return 1;
+        }
+        
+        function transitionTo(endAction, duration = 0.5) {
+            if (!endAction) return;
+            if (!currentAction) {
+                endAction.reset().play();
+                currentAction = endAction;
+                return;
+            }
+            if (currentAction === endAction) return;
+            endAction.reset().play();
+            const targetWeight = getWeightForAction(endAction);
+            setWeight(endAction, targetWeight);
+            currentAction.crossFadeTo(endAction, duration, true);
+            currentAction = endAction;
+        }
+        
+        function createPanel() {
+            const panel = new GUI({ width: 310 });
+            const folder1 = panel.addFolder('Visibility');
+            const folder3 = panel.addFolder('Pausing/Stepping');
+            const folder4 = panel.addFolder('Crossfading');
+            const folder5 = panel.addFolder('Blend Weights');
+            const folder6 = panel.addFolder('General Speed');
+            
+            settings = {
+                'show robot': true,
+                'show map': true,
+                'pause/continue': pauseContinue,
+                'make single step': toSingleStepMode,
+                'modify step size': 0.05,
+                'use default duration': true,
+                'set custom duration': 0.5,
+                'walk weight': 1.0,
+                'take weight': 0.6,
+                'turn left weight': 0.8,
+                'turn right weight': 0.8,
+                'stop weight': 0.4,
+                'modify time scale': 1.0
+            };
+            
+            folder1.add(settings, 'show robot').onChange(v => { if (robot) robot.visible = v; });
+            folder1.add(settings, 'show map').onChange(v => { if (map) map.visible = v; });
+            
+            folder3.add(settings, 'pause/continue');
+            folder3.add(settings, 'make single step');
+            folder3.add(settings, 'modify step size', 0.01, 0.1, 0.001);
+            
+            folder4.add(settings, 'use default duration');
+            folder4.add(settings, 'set custom duration', 0, 10, 0.01);
+            folder4.add({ f: () => crossTo(walkAction) }, 'f').name('to walk');
+            folder4.add({ f: () => crossTo(takeAction) }, 'f').name('to take');
+            folder4.add({ f: () => crossTo(trunLeftAction) }, 'f').name('to turn left');
+            folder4.add({ f: () => crossTo(trunRightAction) }, 'f').name('to turn right');
+            folder4.add({ f: () => crossTo(stopAction) }, 'f').name('to stop');
+            
+            folder5.add(settings, 'walk weight', 0, 1, 0.01).listen().onChange(w => setWeight(walkAction, w));
+            folder5.add(settings, 'take weight', 0, 1, 0.01).listen().onChange(w => setWeight(takeAction, w));
+            folder5.add(settings, 'turn left weight', 0, 1, 0.01).listen().onChange(w => setWeight(trunLeftAction, w));
+            folder5.add(settings, 'turn right weight', 0, 1, 0.01).listen().onChange(w => setWeight(trunRightAction, w));
+            folder5.add(settings, 'stop weight', 0, 1, 0.01).listen().onChange(w => setWeight(stopAction, w));
+            
+            folder6.add(settings, 'modify time scale', 0, 1.5, 0.01).onChange(modifyTimeScale);
+            
+            folder1.open();
+            folder3.open();
+            folder4.open();
+            folder5.open();
+            folder6.open();
+        }
+        
+        function crossTo(action) {
+            const duration = settings['use default duration'] ? settings['set custom duration'] : settings['set custom duration'];
+            transitionTo(action, duration);
+        }
+        
+        function modifyTimeScale(speed) {
+            if (mixer) mixer.timeScale = speed;
+        }
+        
+        function pauseContinue() {
+            if (singleStepMode) {
+                singleStepMode = false;
+                unPauseAllActions();
+            } else {
+                if (!actions.length) return;
+                actions[0] && actions[0].paused ? unPauseAllActions() : pauseAllActions();
+            }
+        }
+        
+        function pauseAllActions() {
+            actions.forEach(a => { if (a) a.paused = true; });
+        }
+        
+        function unPauseAllActions() {
+            actions.forEach(a => { if (a) a.paused = false; });
+        }
+        
+        function toSingleStepMode() {
+            unPauseAllActions();
+            singleStepMode = true;
+            sizeOfNextStep = settings['modify step size'];
         }
 
         function onResize() {
@@ -575,46 +701,17 @@
             robot.position.set(x, 0, z);
 
             // 动画过渡时间（秒）
-            const crossFadeDuration = 0.5;
+            const crossFadeDuration = 0.05;
 
             // 根据 turn 值播放相应的转向动画
             if (positionsAnimation[currentSegment].turn === 'trunLeft') {
-                // 播放左转动画
-                if (trunLeftAction) {
-                    trunLeftAction.play();
-                    takeAction.stop();
-                    walkAction.stop();
-                }
+                transitionTo(trunLeftAction, crossFadeDuration);
             } else if (positionsAnimation[currentSegment].turn === 'trunRight') {
-                // 播放右转动画
-                if (trunRightAction) {
-                    trunRightAction.play();
-                    walkAction.stop();
-                    takeAction.stop();
-
-                }
+                transitionTo(trunRightAction, crossFadeDuration);
             } else if (positionsAnimation[currentSegment].turn === 'pause') {
-                // 播放停止动画
-                if (stopAction) {
-                    takeAction.play();
-                    trunRightAction.stop();
-                    trunLeftAction.stop();
-                    walkAction.stop();
-                    // takeAction.stop();
-
-                }
+                transitionTo(takeAction, crossFadeDuration);
             } else if (positionsAnimation[currentSegment].turn === '') {
-                // 恢复行走动画
-
-                if (walkAction) {
-                    // 只有当前没有运行其他动画时才播放行走动画
-                    walkAction.play();
-                    trunRightAction.stop();
-                    trunLeftAction.stop();
-                    takeAction.stop();
-
-
-                }
+                transitionTo(walkAction, crossFadeDuration);
             }
 
             if (Math.abs(nextPos.x - currentPos.x) > 0.01 || Math.abs(nextPos.z - currentPos.z) > 0.01) {
@@ -668,9 +765,13 @@
         function animate() {
             requestAnimationFrame(animate);
             const now = performance.now();
-            const delta = (now - last) / 1000;
+            let delta = (now - last) / 1000;
             last = now;
             if (robot) {
+                if (singleStepMode) {
+                    delta = sizeOfNextStep;
+                    sizeOfNextStep = 0;
+                }
                 if (mixer) mixer.update(delta);
                 moveSquare(delta);
             }

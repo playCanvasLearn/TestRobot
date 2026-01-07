@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>three.js webgl - animation - skinning</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<link type="text/css" rel="stylesheet" href="main.css">
+		<style>
+			a {
+				color: #f00;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="container"></div>
+		<div id="info">
+			<a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> - Skeletal Animation Blending
+			(model from <a href="https://www.mixamo.com/" target="_blank" rel="noopener">mixamo.com</a>)<br/>
+			Note: crossfades are possible with blend weights being set to (1,0,0), (0,1,0) or (0,0,1)
+		</div>
+
+		<script type="importmap">
+			{
+				"imports": {
+					"three": "https://threejs.org/build/three.module.js",
+					"three/addons/": "https://threejs.org/examples/jsm/"
+				}
+			}
+		</script>
+
+		<script type="module">
+
+			// 引入 Three.js 核心库
+			import * as THREE from 'three';
+
+			// FPS / 性能监控面板
+			import Stats from 'three/addons/libs/stats.module.js';
+
+			// GUI 面板（用于调试动画、权重、切换等）
+			import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
+
+			// glTF / glb 模型加载器
+			import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+			// 场景、渲染器、相机、性能面板
+			let scene, renderer, camera, stats;
+
+			// 模型、骨骼辅助、动画混合器、时钟
+			let model, skeleton, mixer, clock;
+
+			// 用于存储交叉淡入淡出（crossfade）的 GUI 控件
+			const crossFadeControls = [];
+
+			// 三个动画动作：站立 / 行走 / 奔跑
+			let idleAction, walkAction, runAction;
+
+			// 当前动画权重
+			let idleWeight, walkWeight, runWeight;
+
+			// 动画动作数组 & GUI 设置对象
+			let actions, settings;
+
+			// 是否处于单步播放模式
+			let singleStepMode = false;
+
+			// 单步播放时，每一步的时间长度
+			let sizeOfNextStep = 0;
+
+			// 初始化入口
+			init();
+
+			function init() {
+
+				// 获取页面容器
+				const container = document.getElementById('container');
+
+				// 创建透视相机
+				camera = new THREE.PerspectiveCamera(
+					45,
+					window.innerWidth / window.innerHeight,
+					1,
+					100
+				);
+
+				// 设置相机位置并朝向角色
+				camera.position.set(1, 2, -3);
+				camera.lookAt(0, 1, 0);
+
+				// Three.js 时钟（用于动画 delta）
+				clock = new THREE.Clock();
+
+				// 创建场景
+				scene = new THREE.Scene();
+
+				// 设置背景色
+				scene.background = new THREE.Color(0xa0a0a0);
+
+				// 添加雾效（增强空间感）
+				scene.fog = new THREE.Fog(0xa0a0a0, 10, 50);
+
+				// 半球光：模拟天空光 + 地面反射光
+				const hemiLight = new THREE.HemisphereLight(0xffffff, 0x8d8d8d, 3);
+				hemiLight.position.set(0, 20, 0);
+				scene.add(hemiLight);
+
+				// 平行光（主光源，用于产生阴影）
+				const dirLight = new THREE.DirectionalLight(0xffffff, 3);
+				dirLight.position.set(-3, 10, -10);
+				dirLight.castShadow = true;
+
+				// 设置阴影摄像机范围
+				dirLight.shadow.camera.top = 2;
+				dirLight.shadow.camera.bottom = -2;
+				dirLight.shadow.camera.left = -2;
+				dirLight.shadow.camera.right = 2;
+				dirLight.shadow.camera.near = 0.1;
+				dirLight.shadow.camera.far = 40;
+
+				scene.add(dirLight);
+
+				// 如需调试阴影范围，可启用
+				// scene.add(new THREE.CameraHelper(dirLight.shadow.camera));
+
+				// ---------- 地面 ----------
+
+				// 创建一个平面作为地面
+				const mesh = new THREE.Mesh(
+					new THREE.PlaneGeometry(100, 100),
+					new THREE.MeshPhongMaterial({
+						color: 0xcbcbcb,
+						depthWrite: false
+					})
+				);
+
+				// 平面旋转为水平
+				mesh.rotation.x = -Math.PI / 2;
+
+				// 地面接收阴影
+				mesh.receiveShadow = true;
+				scene.add(mesh);
+
+				// ---------- 加载模型 ----------
+
+				const loader = new GLTFLoader();
+				loader.load('/Soldier.glb', function (gltf) {
+
+					// 获取模型根节点
+					model = gltf.scene;
+					scene.add(model);
+
+					// 遍历模型，开启投射阴影
+					model.traverse(function (object) {
+						if (object.isMesh) object.castShadow = true;
+					});
+
+					// 创建骨骼辅助线（调试用）
+					skeleton = new THREE.SkeletonHelper(model);
+					skeleton.visible = false;
+					scene.add(skeleton);
+
+					// 创建 GUI 面板
+					createPanel();
+
+					// 获取动画数据
+					const animations = gltf.animations;
+
+					// 创建动画混合器
+					mixer = new THREE.AnimationMixer(model);
+
+					// 根据动画索引创建动作
+					idleAction = mixer.clipAction(animations[0]); // 站立
+					walkAction = mixer.clipAction(animations[3]); // 行走
+					runAction  = mixer.clipAction(animations[1]); // 奔跑
+
+					// 所有动作集合
+					actions = [idleAction, walkAction, runAction];
+
+					// 激活动画
+					activateAllActions();
+
+					// 启动渲染循环
+					renderer.setAnimationLoop(animate);
+				});
+
+				// ---------- 渲染器 ----------
+
+				renderer = new THREE.WebGLRenderer({ antialias: true });
+				renderer.setPixelRatio(window.devicePixelRatio);
+				renderer.setSize(window.innerWidth, window.innerHeight);
+
+				// 启用阴影
+				renderer.shadowMap.enabled = true;
+
+				container.appendChild(renderer.domElement);
+
+				// 性能监控面板
+				stats = new Stats();
+				container.appendChild(stats.dom);
+
+				// 窗口大小变化处理
+				window.addEventListener('resize', onWindowResize);
+			}
+
+			// ================= GUI 面板 =================
+
+			function createPanel() {
+
+				// 创建 GUI 面板
+				const panel = new GUI({ width: 310 });
+
+				// 不同功能分组
+				const folder1 = panel.addFolder('Visibility');
+				const folder2 = panel.addFolder('Activation/Deactivation');
+				const folder3 = panel.addFolder('Pausing/Stepping');
+				const folder4 = panel.addFolder('Crossfading');
+				const folder5 = panel.addFolder('Blend Weights');
+				const folder6 = panel.addFolder('General Speed');
+
+				// GUI 绑定的数据与回调
+				settings = {
+					'show model': true,
+					'show skeleton': false,
+					'deactivate all': deactivateAllActions,
+					'activate all': activateAllActions,
+					'pause/continue': pauseContinue,
+					'make single step': toSingleStepMode,
+					'modify step size': 0.05,
+
+					// 动画之间的交叉淡入淡出
+					'from walk to idle': () => prepareCrossFade(walkAction, idleAction, 1.0),
+					'from idle to walk': () => prepareCrossFade(idleAction, walkAction, 0.5),
+					'from walk to run':  () => prepareCrossFade(walkAction, runAction, 2.5),
+					'from run to walk':  () => prepareCrossFade(runAction, walkAction, 5.0),
+
+					'use default duration': true,
+					'set custom duration': 3.5,
+
+					// 动画权重
+					'modify idle weight': 0.0,
+					'modify walk weight': 1.0,
+					'modify run weight': 0.0,
+
+					// 动画整体播放速度
+					'modify time scale': 1.0
+				};
+
+				// 可见性控制
+				folder1.add(settings, 'show model').onChange(showModel);
+				folder1.add(settings, 'show skeleton').onChange(showSkeleton);
+
+				// 动画激活/停用
+				folder2.add(settings, 'deactivate all');
+				folder2.add(settings, 'activate all');
+
+				// 暂停 & 单步
+				folder3.add(settings, 'pause/continue');
+				folder3.add(settings, 'make single step');
+				folder3.add(settings, 'modify step size', 0.01, 0.1, 0.001);
+
+				// 交叉淡入淡出按钮
+				crossFadeControls.push(folder4.add(settings, 'from walk to idle'));
+				crossFadeControls.push(folder4.add(settings, 'from idle to walk'));
+				crossFadeControls.push(folder4.add(settings, 'from walk to run'));
+				crossFadeControls.push(folder4.add(settings, 'from run to walk'));
+				folder4.add(settings, 'use default duration');
+				folder4.add(settings, 'set custom duration', 0, 10, 0.01);
+
+				// 动画权重调节
+				folder5.add(settings, 'modify idle weight', 0, 1, 0.01).listen()
+					.onChange(w => setWeight(idleAction, w));
+				folder5.add(settings, 'modify walk weight', 0, 1, 0.01).listen()
+					.onChange(w => setWeight(walkAction, w));
+				folder5.add(settings, 'modify run weight', 0, 1, 0.01).listen()
+					.onChange(w => setWeight(runAction, w));
+
+				// 播放速度
+				folder6.add(settings, 'modify time scale', 0, 1.5, 0.01)
+					.onChange(modifyTimeScale);
+
+				// 默认展开
+				folder1.open();
+				folder2.open();
+				folder3.open();
+				folder4.open();
+				folder5.open();
+				folder6.open();
+			}
+
+			// ================= 辅助函数 =================
+
+			// 显示 / 隐藏模型
+			function showModel(visibility) {
+				model.visible = visibility;
+			}
+
+			// 显示 / 隐藏骨骼
+			function showSkeleton(visibility) {
+				skeleton.visible = visibility;
+			}
+
+			// 修改动画整体播放速度
+			function modifyTimeScale(speed) {
+				mixer.timeScale = speed;
+			}
+
+			// 停止所有动画
+			function deactivateAllActions() {
+				actions.forEach(action => action.stop());
+			}
+
+			// 激活所有动画并设置权重
+			function activateAllActions() {
+				setWeight(idleAction, settings['modify idle weight']);
+				setWeight(walkAction, settings['modify walk weight']);
+				setWeight(runAction,  settings['modify run weight']);
+				actions.forEach(action => action.play());
+			}
+
+			// 暂停 / 继续播放
+			function pauseContinue() {
+				if (singleStepMode) {
+					singleStepMode = false;
+					unPauseAllActions();
+				} else {
+					idleAction.paused ? unPauseAllActions() : pauseAllActions();
+				}
+			}
+
+			// 暂停所有动画
+			function pauseAllActions() {
+				actions.forEach(action => action.paused = true);
+			}
+
+			// 恢复所有动画
+			function unPauseAllActions() {
+				actions.forEach(action => action.paused = false);
+			}
+
+			// 进入单步播放模式
+			function toSingleStepMode() {
+				unPauseAllActions();
+				singleStepMode = true;
+				sizeOfNextStep = settings['modify step size'];
+			}
+
+			// 准备动画交叉淡入淡出
+			function prepareCrossFade(startAction, endAction, defaultDuration) {
+
+				const duration = settings['use default duration']
+					? defaultDuration
+					: settings['set custom duration'];
+
+				singleStepMode = false;
+				unPauseAllActions();
+
+				// idle 动画可直接切换，其它需等当前循环结束
+				if (startAction === idleAction) {
+					executeCrossFade(startAction, endAction, duration);
+				} else {
+					synchronizeCrossFade(startAction, endAction, duration);
+				}
+			}
+
+			// 等待当前动画循环结束后再切换
+			function synchronizeCrossFade(startAction, endAction, duration) {
+				mixer.addEventListener('loop', function onLoopFinished(event) {
+					if (event.action === startAction) {
+						mixer.removeEventListener('loop', onLoopFinished);
+						executeCrossFade(startAction, endAction, duration);
+					}
+				});
+			}
+
+			// 执行动画淡入淡出
+			function executeCrossFade(startAction, endAction, duration) {
+				setWeight(endAction, 1);
+				endAction.time = 0;
+				startAction.crossFadeTo(endAction, duration, true);
+			}
+
+			// 设置动画权重（并恢复 timeScale）
+			function setWeight(action, weight) {
+				action.enabled = true;
+				action.setEffectiveTimeScale(1);
+				action.setEffectiveWeight(weight);
+			}
+
+			// 窗口尺寸变化
+			function onWindowResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize(window.innerWidth, window.innerHeight);
+			}
+
+			// ================= 渲染循环 =================
+
+			function animate() {
+
+				// 获取当前动画权重
+				idleWeight = idleAction.getEffectiveWeight();
+				walkWeight = walkAction.getEffectiveWeight();
+				runWeight  = runAction.getEffectiveWeight();
+
+				// 更新时间步长
+				let mixerUpdateDelta = clock.getDelta();
+
+				// 单步播放模式下只前进一次
+				if (singleStepMode) {
+					mixerUpdateDelta = sizeOfNextStep;
+					sizeOfNextStep = 0;
+				}
+
+				// 更新动画
+				mixer.update(mixerUpdateDelta);
+
+				// 渲染场景
+				renderer.render(scene, camera);
+
+				// 更新性能面板
+				stats.update();
+			}
+
+		</script>
+
+
+	</body>
+</html>
