@@ -86,7 +86,7 @@
         import { DRACOLoader } from './js/DRACOLoader.js';
         import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
         import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
-        import * as echarts from 'echarts';
+        import { setupChartTexture } from './js/chartTexture.js';
 
         const dracoLoader = new DRACOLoader();
         dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.4.1/');
@@ -116,9 +116,7 @@
         let robotLabel = null;
         let currentLabelContent = '';
 
-        let chartInstance = null;
-        let chartData = [];
-        let lastChartDataTime = 0;
+
 
         let stopAction = null;
         let takeAction = null;
@@ -266,6 +264,13 @@
 
             // 更新纹理
             robotLabel.material.map.needsUpdate = true;
+            if (scene) {
+                scene.traverse((child) => {
+                    if (child.isMesh && child.chartController) {
+                        child.chartController.setTitle(currentLabelContent);
+                    }
+                });
+            }
         }
 
         function loadMap() {
@@ -311,184 +316,6 @@
                     setupChartTexture(child);
                 }
             });
-        }
-
-        // 创建图表纹理函数
-        function setupChartTexture(screenMesh) {
-            // 创建canvas用于绘制图表
-            const canvas = document.createElement('canvas');
-            canvas.width = 512;
-            canvas.height = 256;
-            canvas.style.display = 'none';
-            document.body.appendChild(canvas);
-
-            // 初始化ECharts
-            chartInstance = echarts.init(canvas, null, { renderer: 'canvas' });
-
-            // 初始化图表数据
-            initializeChartData();
-
-            // 绘制初始图表
-            updateChart();
-
-            // 每5秒更新一次数据
-            setInterval(() => {
-                updateChartData();
-                updateChart();
-            }, 5000);
-
-            // 创建纹理
-            const chartTexture = new THREE.CanvasTexture(canvas);
-            chartTexture.minFilter = THREE.LinearFilter;
-            chartTexture.magFilter = THREE.LinearFilter;
-            chartTexture.format = THREE.RGBAFormat;
-            chartTexture.generateMipmaps = false;
-            chartTexture.wrapS = THREE.ClampToEdgeWrapping;
-            chartTexture.wrapT = THREE.ClampToEdgeWrapping;
-
-            // 检查并添加UV坐标（如果没有的话）
-            if (!screenMesh.geometry.attributes.uv) {
-                generateUVCoordinates(screenMesh.geometry);
-            }
-
-            // 为屏幕创建专用材质
-            if (screenMesh.material) {
-                const chartMaterial = new THREE.MeshBasicMaterial({
-                    map: chartTexture,
-                    transparent: false
-                });
-
-                screenMesh.material = chartMaterial;
-                screenMesh.material.needsUpdate = true;
-            }
-
-            // 保存纹理引用以便更新
-            screenMesh.chartTexture = chartTexture;
-            screenMesh.canvas = canvas;
-        }
-
-        // 初始化图表数据
-        function initializeChartData() {
-            chartData = [];
-            const now = Date.now();
-            for (let i = 9; i >= 0; i--) {
-                chartData.push({
-                    time: now - i * 5000,
-                    value: Math.random() * 100
-                });
-            }
-        }
-
-        // 更新图表数据
-        function updateChartData() {
-            // 添加新数据点
-            chartData.push({
-                time: Date.now(),
-                value: Math.random() * 100
-            });
-
-            // 保持最多10个数据点
-            if (chartData.length > 10) {
-                chartData.shift();
-            }
-        }
-
-        // 更新图表显示
-        function updateChart() {
-            if (!chartInstance) return;
-
-            // 格式化时间显示
-            const formattedData = chartData.map(item => ({
-                time: new Date(item.time).toLocaleTimeString('zh-CN', { hour12: false }),
-                value: item.value.toFixed(2)
-            }));
-
-            // 获取当前显示的消息内容作为图表标题
-            let chartTitle = '实时数据监控:';
-            if (currentLabelContent) {
-                chartTitle = currentLabelContent;
-            }
-            // 配置图表选项
-            const option = {
-                title: {
-                    text: chartTitle,
-                    textStyle: {
-                        color: '#fff',
-                        fontSize: 14
-                    },
-                    left: '10%',
-                    top: '20%'
-                },
-                tooltip: {
-                    trigger: 'axis',
-                    textStyle: {
-                        color: '#fff'
-                    },
-                    backgroundColor: 'rgba(0,0,0,0.2)'
-                },
-                xAxis: {
-                    type: 'category',
-                    data: formattedData.map(item => item.time),
-                    axisLine: { lineStyle: { color: '#fff' } },
-                    axisLabel: {
-                        color: '#fff',
-                        fontSize: 10,
-                        rotate: 45
-                    }
-                },
-                yAxis: {
-                    type: 'value',
-                    axisLine: { lineStyle: { color: '#fff' } },
-                    axisLabel: { color: '#fff' },
-                    splitLine: { show: false }
-                },
-                series: [{
-                    data: formattedData.map(item => item.value),
-                    type: 'line',
-                    smooth: true,
-                    lineStyle: { color: '#00ff00' },
-                    itemStyle: { color: '#00ff00' },
-                }],
-                backgroundColor: 'rgba(0,0,0,0.2)',
-                grid: {
-                    left: '12%',
-                    right: '10%',
-                    top: '30%',
-                    bottom: '35%'
-                }
-            };
-
-            chartInstance.setOption(option, true);
-
-            // 强制更新纹理
-            if (scene) {
-                scene.traverse((child) => {
-                    if (child.isMesh && child.name && child.name.includes('屏幕') && child.canvas) {
-                        child.chartTexture.needsUpdate = true;
-                    }
-                });
-            }
-        }
-
-        // 生成默认UV坐标的函数
-        function generateUVCoordinates(geometry) {
-            const positionAttribute = geometry.attributes.position;
-            const vertexCount = positionAttribute.count;
-
-            // 创建UV坐标数组
-            const uvArray = new Float32Array(vertexCount * 2);
-
-            // 为每个顶点生成简单的UV坐标（这里假设是矩形屏幕）
-            for (let i = 0; i < vertexCount; i++) {
-                // 简单的UV映射，可以根据实际模型调整
-                uvArray[i * 2] = (positionAttribute.getX(i) + 1) / 2;     // U坐标
-                uvArray[i * 2 + 1] = (positionAttribute.getY(i) + 1) / 2; // V坐标
-            }
-
-            // 添加UV属性到几何体
-            geometry.setAttribute('uv', new THREE.BufferAttribute(uvArray, 2));
-            geometry.attributes.uv.needsUpdate = true;
-
         }
 
         // 载入机器人
@@ -808,13 +635,11 @@
             // 更新门的位置
             updateDoors(delta);
             // 更新图表纹理
-            if (chartInstance) {
-                scene.traverse((child) => {
-                    if (child.isMesh && child.name && child.name.includes('屏幕') && child.chartTexture) {
-                        child.chartTexture.needsUpdate = true;
-                    }
-                });
-            }
+            scene.traverse((child) => {
+                if (child.isMesh && child.chartTexture) {
+                    child.chartTexture.needsUpdate = true;
+                }
+            });
             renderer.render(scene, camera);
         }
 
