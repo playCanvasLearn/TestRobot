@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Robot Path Demo</title>
+    <style>
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            background: #111;
+        }
+    </style>
+</head>
+
+<body>
+    <video id="videoContainer" style="display: none;" autoplay loop muted>
+        <source src="/video/bi.mp4" type="video/mp4">
+        您的浏览器不支持视频播放。
+    </video>
+    <canvas id="container"></canvas>
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://threejs.org/build/three.module.js",
+        "three/addons/": "https://threejs.org/examples/jsm/",
+        "echarts": "https://cdn.jsdelivr.net/npm/echarts@5.4.0/dist/echarts.esm.min.js"
+      }
+    }
+    </script>
+
+    <script type="module">
+        const positionsAnimation = [
+            // { showMessage: '', turn: 'walking_West', position: { x: 1.3, y: 0, z: 3.3 } }, //初始位置
+            { showMessage: '去拿料', turn: '', position: { x: 1.8, y: 0, z: 2.5 } },
+            // { showMessage: '去拿料', turn: 'pause', position: { x: 1.8, y: 0, z: 4.5 } },
+            { showMessage: '去拿料', turn: 'trunRight', position: { x: 1.8, y: 0, z: 4.5 } },
+            { showMessage: '拿料中', turn: 'pause', position: { x: 1.8, y: 0, z: 4.5 } },
+            { showMessage: '去加工', turn: 'trunRight', position: { x: 1.79, y: 0, z: 4.5 } },
+            { showMessage: '去加工', turn: '', position: { x: 1.7, y: 0, z: 4.5 } },
+            { showMessage: '去加工', turn: '', position: { x: 1.7, y: 0, z: 2.5 } },
+            { showMessage: '去加工', turn: '', position: { x: 1.7, y: 0, z: 0.5 } },
+            { showMessage: '去加工', turn: 'trunLeft', position: { x: 1.7, y: 0, z: -1.1 } },
+            { showMessage: '去加工', turn: '', position: { x: 1.7, y: 0, z: -1.1 } },
+            { showMessage: '加工中', turn: 'pause', position: { x: 0.4, y: 0, z: -0.9 } },
+            { showMessage: '去检测', turn: 'trunRight', position: { x: 0.4, y: 0, z: -0.9 } },
+            { showMessage: '去检测', turn: '', position: { x: 0.4, y: 0, z: -0.9 } },
+            { showMessage: '去检测', turn: '', position: { x: 0.3, y: 0, z: -1.9 } },
+            { showMessage: '去检测', turn: '', position: { x: 0.3, y: 0, z: -3.9 } },
+            { showMessage: '去检测', turn: 'trunLeft', position: { x: 0.3, y: 0, z: -6.4 } },
+            { showMessage: '检测中', turn: 'pause', position: { x: 0.31, y: 0, z: -6.5 } },
+            { showMessage: '不合格', turn: 'trunLeft', position: { x: 0.3, y: 0, z: -6.5 } },
+            { showMessage: '去加工', turn: '', position: { x: 0.3, y: 0, z: -6.5 } },
+            { showMessage: '去加工', turn: '', position: { x: 0.3, y: 0, z: -3.5 } },
+            { showMessage: '去加工', turn: 'trunRight', position: { x: 0.31, y: 0, z: -0.9 } },
+            { showMessage: '加工中', turn: 'pause', position: { x: 0.31, y: 0, z: -0.9 } },
+            { showMessage: '去检测', turn: 'trunRight', position: { x: 0.3, y: 0, z: -0.9 } },
+            { showMessage: '去检测', turn: '', position: { x: 0.3, y: 0, z: -0.9 } },
+            { showMessage: '去检测', turn: '', position: { x: 0.3, y: 0, z: -1.9 } },
+            { showMessage: '去检测', turn: '', position: { x: 0.3, y: 0, z: -3.9 } },
+            { showMessage: '去检测', turn: 'trunLeft', position: { x: 0.3, y: 0, z: -6.4 } },
+            { showMessage: '检测中', turn: 'pause', position: { x: 0.31, y: 0, z: -6.5 } },
+            { showMessage: '合格', turn: 'trunLeft', position: { x: 0.3, y: 0, z: -6.5 } },
+            { showMessage: '去放料', turn: '', position: { x: 0.29, y: 0, z: -6.5 } },
+            { showMessage: '去放料', turn: '', position: { x: 0.29, y: 0, z: -3.7 } },
+            { showMessage: '去放料', turn: '', position: { x: 0.3, y: 0, z: 0 } },
+            { showMessage: '去放料', turn: '', position: { x: 0.3, y: 0, z: 2 } },
+            { showMessage: '去放料', turn: 'trunRight', position: { x: 0.3, y: 0, z: 2.7 } },
+            { showMessage: '去放料', turn: '', position: { x: 0.3, y: 0, z: 2.7 } },
+            { showMessage: '去放料', turn: '', position: { x: -1, y: 0, z: 2.7 } },
+            { showMessage: '去放料', turn: 'trunLeft', position: { x: -1, y: 0, z: 2.7 } },
+            { showMessage: '去放料', turn: '', position: { x: -1, y: 0, z: 2.7 } },
+            { showMessage: '放料中', turn: 'pause', position: { x: -1.2, y: 0, z: 4.5 } },
+            { showMessage: '去拿料', turn: '', position: { x: -1.3, y: 0, z: 4.5 } },
+            { showMessage: '去拿料', turn: '', position: { x: -1.3, y: 0, z: 2.7 } },
+            { showMessage: '去拿料', turn: '', position: { x: 1.8, y: 0, z: 2.5 } }, //初始位置
+        ];
+
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import { DRACOLoader } from './js/DRACOLoader.js';
+        import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
+        import * as echarts from 'echarts';
+
+        const modelPathAnimationtrunLeft_Bottom = './animation/trunLeft_Bottom.glb';
+        const modelPathAnimationtrunLeft_East = './animation/trunLeft_East.glb';
+        const modelPathAnimationtrunLeft_Top = './animation/trunLeft_Top.glb';
+        const modelPathAnimationtrunLeft_West = './animation/trunLeft_West.glb';
+        const modelPathAnimationtrunRight_Bottom = './animation/trunRight_Bottom.glb';
+        const modelPathAnimationtrunRight_East = './animation/trunRight_East.glb';
+        const modelPathAnimationtrunRight_Top = './animation/trunRight_Top.glb';
+        const modelPathAnimationtrunRight_West = './animation/trunRight_West.glb';
+
+        const dracoLoader = new DRACOLoader();
+        dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.4.1/');
+
+        const gltfLoader = new GLTFLoader();
+        gltfLoader.setDRACOLoader(dracoLoader);
+
+        const raycaster = new THREE.Raycaster();
+        let scene, camera, renderer, controls;
+        let map, robot, mixer, walkAction, modelAll;
+
+        let t = 0;
+
+        const speed = 0.1;
+
+        // 修改全局变量初始化
+        let leftDoor = null;
+        let rightDoor = null;
+        let doorInitialZ = {};
+        let isProcessing = false;
+        let doorAnimationProgress = 0;
+        let animationDirection = 0; // 0表示无动作，1表示开门，-1表示关门
+
+        let isPaused = false;
+        let pauseStartTime = null;
+
+        let robotLabel = null;
+        let currentLabelContent = '';
+
+        let chartInstance = null;
+        let chartData = [];
+        let lastChartDataTime = 0;
+
+
+        let animationModels = {};
+        let activeAnimationModel = null;
+
+        // 加载动画模型
+        function loadAnimationModel(name, path) {
+            return new Promise((resolve, reject) => {
+                gltfLoader.load(path, (gltf) => {
+                    // 克隆模型并初始化
+                    const model = SkeletonUtils.clone(gltf.scene);
+                    model.scale.set(2, 2, 2);
+                    model.visible = false; // 默认隐藏
+
+                    // 创建动画混合器和动作
+                    const animMixer = new THREE.AnimationMixer(model);
+                    const animations = {};
+
+                    // 为每个动画创建动作
+                    gltf.animations.forEach((clip, index) => {
+                        animations[clip.name] = animMixer.clipAction(clip);
+                    });
+
+                    // 存储模型相关信息
+                    animationModels[name] = {
+                        model: model,
+                        mixer: animMixer,
+                        animations: animations
+                    };
+
+                    // 添加到场景中
+                    scene.add(model);
+
+                    console.log(`动画模型 ${name} 加载完成`);
+                    resolve(animationModels[name]);
+                }, undefined, (error) => {
+                    console.error(`加载动画模型 ${name} 失败:`, error);
+                    reject(error);
+                });
+            });
+        }
+
+
+        // 隐藏指定的动画模型
+        function hideAnimationModel(name) {
+            if (animationModels[name] && animationModels[name].model) {
+                animationModels[name].model.visible = false;
+
+                // 停止所有动画
+                Object.values(animationModels[name].animations).forEach(action => {
+                    action.stop();
+                });
+            }
+        }
+
+        // 显示指定的动画模型并播放动画
+        function showAnimationModel(name, animationName = null) {
+            if (!animationModels[name]) {
+                console.warn(`动画模型 ${name} 不存在`);
+                return;
+            }
+
+            // 隐藏当前活动的模型
+            if (activeAnimationModel) {
+                hideAnimationModel(activeAnimationModel);
+            }
+
+            // 显示新模型
+            const modelInfo = animationModels[name];
+            modelInfo.model.visible = true;
+            activeAnimationModel = name;
+
+            // 如果指定了动画名称，则播放对应动画
+            if (animationName && modelInfo.animations[animationName]) {
+                // 停止所有其他动画
+                Object.values(modelInfo.animations).forEach(action => {
+                    action.stop();
+                });
+
+                // 播放指定动画
+                modelInfo.animations[animationName].play();
+            }
+
+            return modelInfo;
+        }
+
+        // 批量加载所有转向动画模型
+        async function loadAllTurnAnimations() {
+            const turnAnimations = {
+                'trunLeft_Bottom': modelPathAnimationtrunLeft_Bottom,
+                'trunLeft_East': modelPathAnimationtrunLeft_East,
+                'trunLeft_Top': modelPathAnimationtrunLeft_Top,
+                'trunLeft_West': modelPathAnimationtrunLeft_West,
+                'trunRight_Bottom': modelPathAnimationtrunRight_Bottom,
+                'trunRight_East': modelPathAnimationtrunRight_East,
+                'trunRight_Top': modelPathAnimationtrunRight_Top,
+                'trunRight_West': modelPathAnimationtrunRight_West
+            };
+
+            try {
+                // 并行加载所有动画模型
+                const loadPromises = Object.entries(turnAnimations).map(([name, path]) =>
+                    loadAnimationModel(name, path)
+                );
+
+                await Promise.all(loadPromises);
+                console.log('所有转向动画模型加载完成');
+            } catch (error) {
+                console.error('加载转向动画模型时出错:', error);
+            }
+        }
+
+        // 更新动画混合器
+        function updateAnimationModels(delta) {
+            Object.values(animationModels).forEach(modelInfo => {
+                if (modelInfo.mixer) {
+                    modelInfo.mixer.update(delta);
+                }
+            });
+        }
+
+
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x222222);
+            camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 0.1, 200);
+            camera.position.set(20, 20, 0);
+            renderer = new THREE.WebGLRenderer({ antialias: true, canvas: document.getElementById("container") });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            controls = new OrbitControls(camera, renderer.domElement);
+            // 灯光
+            const light = new THREE.DirectionalLight(0xffffff, 5);
+            light.position.set(5, 10, 7);
+            scene.add(light);
+            loadMap();
+            loadRobot();
+
+            // 加载所有转向动画模型
+            loadAllTurnAnimations();
+            createRobotLabel(); // 创建机器人标签
+            window.addEventListener("resize", onResize);
+        }
+
+        // 创建机器人头顶标签的函数
+        function createRobotLabel() {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = 50;
+            canvas.height = 20;
+
+            // 创建canvas纹理
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.minFilter = THREE.LinearFilter;
+            texture.magFilter = THREE.LinearFilter;
+
+            // 创建材质
+            const material = new THREE.SpriteMaterial({
+                map: texture,
+                transparent: true,
+                depthTest: false // 确保标签始终可见
+            });
+
+            // 创建精灵对象
+            robotLabel = new THREE.Sprite(material);
+            robotLabel.scale.set(1, 0.5, 0.5); // 调整标签大小
+            robotLabel.visible = false; // 初始隐藏
+            scene.add(robotLabel);
+        }
+
+        // 更新标签内容的函数
+        function updateLabelContent(text) {
+            if (!robotLabel || currentLabelContent === text) return;
+            currentLabelContent = text;
+            if (text === '') {
+                robotLabel.visible = false;
+                return;
+            }
+            robotLabel.visible = true;
+            // 更新canvas内容
+            const canvas = robotLabel.material.map.image;
+            const context = canvas.getContext('2d');
+
+            // 清空画布
+            context.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 绘制背景
+            context.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            context.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 绘制文字
+            context.font = '12px Arial';
+            context.fillStyle = 'white';
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+
+            // 文字换行处理
+            const words = text.split('');
+            let line = '';
+            const lines = [];
+            const maxWidth = canvas.width;
+
+            for (let i = 0; i < words.length; i++) {
+                const testLine = line + words[i];
+                const metrics = context.measureText(testLine);
+                if (metrics.width > maxWidth && i > 0) {
+                    lines.push(line);
+                    line = words[i];
+                } else {
+                    line = testLine;
+                }
+            }
+            lines.push(line);
+
+            // 绘制多行文字
+            const lineHeight = 30;
+            const startY = (canvas.height - (lines.length - 1) * lineHeight) / 2;
+
+            for (let i = 0; i < lines.length; i++) {
+                context.fillText(lines[i], canvas.width / 2, startY + i * lineHeight);
+            }
+
+            // 更新纹理
+            robotLabel.material.map.needsUpdate = true;
+        }
+
+        function loadMap() {
+            gltfLoader.load("./sketchMap.glb", (gltf) => {
+                map = SkeletonUtils.clone(gltf.scene);
+                map.scale.set(1, 1, 1);
+                const modelMap = gltf.scene;
+                let arrMachines = [];
+                modelMap.children.forEach((child) => {
+                    if (child) {
+                        arrMachines.push(child);
+                    }
+                });
+                modelAll = arrMachines;
+                scene.add(map);
+
+                // 在模型中查找门
+                findDoorsInModel(map);
+
+                // 在模型中查找屏幕
+                findScreenInModel(map);
+            });
+        }
+
+        function findDoorsInModel(model) {
+            model.traverse((child) => {
+                if (child.isMesh) {
+                    if (child.name && child.name.toLowerCase().includes('左侧门')) {
+                        leftDoor = child;
+                        doorInitialZ.left = child.position.z;
+                    }
+                    if (child.name && child.name.toLowerCase().includes('右侧门')) {
+                        rightDoor = child;
+                        doorInitialZ.right = child.position.z;
+                    }
+                }
+            });
+        }
+
+        function findScreenInModel(model) {
+            model.traverse((child) => {
+                if (child.isMesh && child.name && child.name.includes('屏幕')) {
+                    setupChartTexture(child);
+                }
+            });
+        }
+
+        // 创建图表纹理函数
+        function setupChartTexture(screenMesh) {
+            // 创建canvas用于绘制图表
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 256;
+            canvas.style.display = 'none';
+            document.body.appendChild(canvas);
+
+            // 初始化ECharts
+            chartInstance = echarts.init(canvas, null, { renderer: 'canvas' });
+
+            // 初始化图表数据
+            initializeChartData();
+
+            // 绘制初始图表
+            updateChart();
+
+            // 每5秒更新一次数据
+            setInterval(() => {
+                updateChartData();
+                updateChart();
+            }, 5000);
+
+            // 创建纹理
+            const chartTexture = new THREE.CanvasTexture(canvas);
+            chartTexture.minFilter = THREE.LinearFilter;
+            chartTexture.magFilter = THREE.LinearFilter;
+            chartTexture.format = THREE.RGBAFormat;
+            chartTexture.generateMipmaps = false;
+            chartTexture.wrapS = THREE.ClampToEdgeWrapping;
+            chartTexture.wrapT = THREE.ClampToEdgeWrapping;
+
+            // 检查并添加UV坐标（如果没有的话）
+            if (!screenMesh.geometry.attributes.uv) {
+                generateUVCoordinates(screenMesh.geometry);
+            }
+
+            // 为屏幕创建专用材质
+            if (screenMesh.material) {
+                const chartMaterial = new THREE.MeshBasicMaterial({
+                    map: chartTexture,
+                    transparent: false
+                });
+
+                screenMesh.material = chartMaterial;
+                screenMesh.material.needsUpdate = true;
+            }
+
+            // 保存纹理引用以便更新
+            screenMesh.chartTexture = chartTexture;
+            screenMesh.canvas = canvas;
+        }
+
+        // 初始化图表数据
+        function initializeChartData() {
+            chartData = [];
+            const now = Date.now();
+            for (let i = 9; i >= 0; i--) {
+                chartData.push({
+                    time: now - i * 5000,
+                    value: Math.random() * 100
+                });
+            }
+        }
+
+        // 更新图表数据
+        function updateChartData() {
+            // 添加新数据点
+            chartData.push({
+                time: Date.now(),
+                value: Math.random() * 100
+            });
+
+            // 保持最多10个数据点
+            if (chartData.length > 10) {
+                chartData.shift();
+            }
+        }
+
+        // 更新图表显示
+        function updateChart() {
+            if (!chartInstance) return;
+
+            // 格式化时间显示
+            const formattedData = chartData.map(item => ({
+                time: new Date(item.time).toLocaleTimeString('zh-CN', { hour12: false }),
+                value: item.value.toFixed(2)
+            }));
+
+            // 获取当前显示的消息内容作为图表标题
+            let chartTitle = '实时数据监控:';
+            if (currentLabelContent) {
+                chartTitle = currentLabelContent;
+            }
+            // 配置图表选项
+            const option = {
+                title: {
+                    text: chartTitle,
+                    textStyle: {
+                        color: '#fff',
+                        fontSize: 14
+                    },
+                    left: '10%',
+                    top: '20%'
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    textStyle: {
+                        color: '#fff'
+                    },
+                    backgroundColor: 'rgba(0,0,0,0.2)'
+                },
+                xAxis: {
+                    type: 'category',
+                    data: formattedData.map(item => item.time),
+                    axisLine: { lineStyle: { color: '#fff' } },
+                    axisLabel: {
+                        color: '#fff',
+                        fontSize: 10,
+                        rotate: 45
+                    }
+                },
+                yAxis: {
+                    type: 'value',
+                    axisLine: { lineStyle: { color: '#fff' } },
+                    axisLabel: { color: '#fff' },
+                    splitLine: { show: false }
+                },
+                series: [{
+                    data: formattedData.map(item => item.value),
+                    type: 'line',
+                    smooth: true,
+                    lineStyle: { color: '#00ff00' },
+                    itemStyle: { color: '#00ff00' },
+                }],
+                backgroundColor: 'rgba(0,0,0,0.2)',
+                grid: {
+                    left: '12%',
+                    right: '10%',
+                    top: '30%',
+                    bottom: '35%'
+                }
+            };
+
+            chartInstance.setOption(option, true);
+
+            // 强制更新纹理
+            if (scene) {
+                scene.traverse((child) => {
+                    if (child.isMesh && child.name && child.name.includes('屏幕') && child.canvas) {
+                        child.chartTexture.needsUpdate = true;
+                    }
+                });
+            }
+        }
+
+        // 生成默认UV坐标的函数
+        function generateUVCoordinates(geometry) {
+            const positionAttribute = geometry.attributes.position;
+            const vertexCount = positionAttribute.count;
+
+            // 创建UV坐标数组
+            const uvArray = new Float32Array(vertexCount * 2);
+
+            // 为每个顶点生成简单的UV坐标（这里假设是矩形屏幕）
+            for (let i = 0; i < vertexCount; i++) {
+                // 简单的UV映射，可以根据实际模型调整
+                uvArray[i * 2] = (positionAttribute.getX(i) + 1) / 2;     // U坐标
+                uvArray[i * 2 + 1] = (positionAttribute.getY(i) + 1) / 2; // V坐标
+            }
+
+            // 添加UV属性到几何体
+            geometry.setAttribute('uv', new THREE.BufferAttribute(uvArray, 2));
+            geometry.attributes.uv.needsUpdate = true;
+
+        }
+
+        // 载入机器人
+        function loadRobot() {
+            gltfLoader.load("./animation3.glb", (gltf) => {
+                // 克隆模型并初始化
+                const model = SkeletonUtils.clone(gltf.scene);
+                model.scale.set(2, 2, 2);
+                model.position.set(1.8, 0, 2.5); // 设置初始位置
+                scene.add(model);
+
+                // 创建动画混合器
+                const animMixer = new THREE.AnimationMixer(model);
+                const animations = {};
+
+                // 遍历所有动画并创建动作
+                gltf.animations.forEach((clip, index) => {
+                    animations[clip.name] = animMixer.clipAction(clip);
+                    // 如果是行走动画（根据您的注释，应该是索引4），设置持续时间
+                    if (index === 4) {
+                        animations[clip.name].setDuration(5);
+                    }
+                });
+
+                // 存储为主角色模型
+                animationModels['mainRobot'] = {
+                    model: model,
+                    mixer: animMixer,
+                    animations: animations
+                };
+
+                // 设置全局引用（为了兼容现有代码）
+                robot = model;
+                mixer = animMixer;
+
+                // 查找行走动画（假设名称包含walk或者根据索引）
+                let walkAnim = null;
+                if (gltf.animations.length > 4) {
+                    // 根据索引查找行走动画
+                    walkAnim = animations[gltf.animations[4].name];
+                } else if (Object.keys(animations).length > 0) {
+                    // 如果找不到索引4的动画，则使用第一个动画
+                    walkAnim = Object.values(animations)[0];
+                }
+
+                if (walkAnim) {
+                    walkAnim.play(); // 默认播放行走动画
+                    walkAction = walkAnim;
+                }
+
+                console.log('主机器人模型加载完成，动画数量:', gltf.animations.length);
+            });
+        }
+
+        function onResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        const handleClick = (event) => {
+            // 计算鼠标位置  此处的坑是 canvas的坐标和浏览器的坐标不一样
+            const rect = renderer.domElement.getBoundingClientRect();
+            const mouseX = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            const mouseY = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+            // 更新射线投射
+            raycaster.setFromCamera(new THREE.Vector2(mouseX, mouseY), camera);
+            // 获取与场景中所有物体的交点
+            const intersects = raycaster.intersectObjects(modelAll, true);
+            if (intersects.length > 0) {
+                const object = intersects[0].object;
+                // 获取点击位置
+                const intersectPoint = intersects[0].point;
+                // console.log('Intersection point:', intersectPoint);
+            }
+        };
+        window.addEventListener('click', handleClick);
+
+
+        function moveSquare(delta) {
+            // if (isPaused) return; // 如果正在暂停则不执行移动逻辑
+
+            const segmentTime = 5;
+            t += delta;
+
+            const progress = t / segmentTime;
+            const currentIndex = Math.floor(progress);
+            const currentSegment = currentIndex % positionsAnimation.length;
+            const nextIndex = (currentSegment + 1) % positionsAnimation.length;
+            const interpolation = progress - currentIndex;
+            const currentPos = positionsAnimation[currentSegment].position;
+            const nextPos = positionsAnimation[nextIndex].position;
+            const x = currentPos.x + (nextPos.x - currentPos.x) * interpolation;
+            const z = currentPos.z + (nextPos.z - currentPos.z) * interpolation;
+            robot.position.set(x, 0, z);
+
+
+            // // 根据 turn 值播放相应的转向动画
+            // if (positionsAnimation[currentSegment].turn === 'trunLeft') {
+            //     // 播放左转动画
+            //     if (trunLeftAction) {
+            //         trunLeftAction.play();
+            //         takeAction.stop();
+            //         walkAction.stop();
+            //     }
+            // } else if (positionsAnimation[currentSegment].turn === 'trunRight') {
+            //     // 播放右转动画
+            //     if (trunRightAction) {
+            //         trunRightAction.play();
+            //         walkAction.stop();
+            //         takeAction.stop();
+
+            //     }
+            // } else if (positionsAnimation[currentSegment].turn === 'pause') {
+            //     // 播放停止动画
+            //     if (stopAction) {
+            //         takeAction.play();
+            //         trunRightAction.stop();
+            //         trunLeftAction.stop();
+            //         walkAction.stop();
+            //         // takeAction.stop();
+
+            //     }
+            // } else if (positionsAnimation[currentSegment].turn === '') {
+            //     // 恢复行走动画
+
+            showAnimationModel('mainRobot', 'walking');
+            // }
+
+            if (Math.abs(nextPos.x - currentPos.x) > 0.01 || Math.abs(nextPos.z - currentPos.z) > 0.01) {
+                robot.lookAt(nextPos.x, 0, nextPos.z);
+            }
+            // 更新机器人标签位置和内容
+            if (robotLabel) {
+                // 设置标签位置在机器人头顶
+                robotLabel.position.set(x, 4, z); // Y轴稍微高于机器人
+                // 更新标签内容
+                updateLabelContent(positionsAnimation[currentSegment].showMessage);
+            }
+
+            // 判断当前状态并控制门的开合
+            updateDoorState(positionsAnimation[currentSegment].showMessage);
+        }
+
+        function updateDoorState(currentStatus) {
+            if (!leftDoor || !rightDoor) return;
+            if (currentStatus === '加工中') {
+                if (!isProcessing) {
+                    isProcessing = true;
+                    animationDirection = 1; // 开门
+                }
+            } else {
+                if (isProcessing) {
+                    isProcessing = false;
+                    animationDirection = -1; // 关门
+                }
+            }
+        }
+
+        function updateDoors(delta) {
+            if (!leftDoor || !rightDoor || animationDirection === 0) return;
+            // 门移动速度，使得在3秒内完成移动
+            const doorSpeed = 1 / 3;
+            // 只有当有动作指令时才更新进度
+            doorAnimationProgress += delta * doorSpeed * animationDirection;
+            doorAnimationProgress = Math.max(0, Math.min(1, doorAnimationProgress));
+            // 更新门的位置
+            leftDoor.position.z = doorInitialZ.left + doorAnimationProgress;
+            rightDoor.position.z = doorInitialZ.right - doorAnimationProgress;
+            // 当动画完成时重置方向
+            if (doorAnimationProgress >= 1 || doorAnimationProgress <= 0) {
+                animationDirection = 0; // 动画完成，停止移动
+            }
+        }
+
+        // ------------------ 渲染循环 ----------------------
+        let last = performance.now();
+        function animate() {
+            requestAnimationFrame(animate);
+            const now = performance.now();
+            const delta = (now - last) / 1000;
+            last = now;
+
+            // 更新所有动画模型
+            updateAnimationModels(delta);
+
+            if (robot) {
+                if (mixer) mixer.update(delta);
+                moveSquare(delta);
+            }
+            // 更新门的位置
+            updateDoors(delta);
+            // 更新图表纹理
+            if (chartInstance) {
+                scene.traverse((child) => {
+                    if (child.isMesh && child.name && child.name.includes('屏幕') && child.chartTexture) {
+                        child.chartTexture.needsUpdate = true;
+                    }
+                });
+            }
+            renderer.render(scene, camera);
+        }
+
+        // 初始化
+        init();
+        animate();
+    </script>
+
+</body>
+
+</html>
