@@ -127,6 +127,11 @@
         let settings;
         let singleStepMode = false;
         let sizeOfNextStep = 0;
+        let axesHelper = null;
+        let lookAtGroup = null;
+        let lookAtMarkers = [];
+        let lookAtLine = null;
+        let prevLookAtIndex = -1;
         // 上一次路径段索引（用于“段触发”，避免每帧重复切换动作）
         let prevSegmentIndex = -1;
         // 冻结位移（播放一次性动作期间暂停移动插值，动作完成后恢复）
@@ -151,7 +156,13 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
             controls = new OrbitControls(camera, renderer.domElement);
 
-            // 灯光
+            axesHelper = new THREE.AxesHelper(3);
+            scene.add(axesHelper);
+            axesHelper.visible = false;
+            lookAtGroup = new THREE.Group();
+            scene.add(lookAtGroup);
+            lookAtGroup.visible = false;
+
             const light = new THREE.DirectionalLight(0xffffff, 4.5);
             light.position.set(4, 8, 7);
             scene.add(light);
@@ -180,6 +191,7 @@
             loadRobot();
             createRobotLabel(); // 创建机器人标签
             window.addEventListener("resize", onResize);
+            buildLookAtMarkers();
         }
 
         // 创建机器人头顶标签的函数
@@ -423,10 +435,12 @@
             settings = {
                 'show robot': true,
                 'show map': true,
+                'show axes': true,
+                'show lookAt': true,
                 'pause/continue': pauseContinue,
                 'make single step': toSingleStepMode,
                 'modify step size': 0.05,
-                'use default duration': true,
+                'use default duration': 0.5,
                 'set custom duration': 0.5,
                 'walk weight': 1.0,
                 'take weight': 0.6,
@@ -438,6 +452,8 @@
 
             folder1.add(settings, 'show robot').onChange(v => { if (robot) robot.visible = v; });
             folder1.add(settings, 'show map').onChange(v => { if (map) map.visible = v; });
+            folder1.add(settings, 'show axes').onChange(v => { if (axesHelper) axesHelper.visible = v; });
+            folder1.add(settings, 'show lookAt').onChange(v => { if (lookAtGroup) lookAtGroup.visible = v; if (lookAtLine) lookAtLine.visible = v; });
 
             folder3.add(settings, 'pause/continue');
             folder3.add(settings, 'make single step');
@@ -518,7 +534,7 @@
                 const object = intersects[0].object;
                 // 获取点击位置
                 const intersectPoint = intersects[0].point;
-                // console.log('Intersection point:', intersectPoint);
+                console.log('Intersection point:', intersectPoint);
             }
         };
         window.addEventListener('click', handleClick);
@@ -526,6 +542,42 @@
         function getCrossFadeDuration() {
             // 过渡时长：优先使用面板设置；没有面板时使用默认值 0.5s
             return settings && settings['use default duration'] ? settings['set custom duration'] : settings ? settings['set custom duration'] : 0.5;
+        }
+        function createTextSprite(text) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 128;
+            canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = 'white';
+            ctx.font = '20px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+            const texture = new THREE.CanvasTexture(canvas);
+            const material = new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false });
+            const sprite = new THREE.Sprite(material);
+            sprite.scale.set(2, 1, 1);
+            return sprite;
+        }
+        function buildLookAtMarkers() {
+            lookAtMarkers = [];
+            lookAtGroup.clear();
+            for (let i = 0; i < positionsAnimation.length; i++) {
+                const seg = positionsAnimation[i];
+                if (!seg.lookAt) continue;
+                const g = new THREE.SphereGeometry(0.12, 16, 16);
+                const m = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+                const s = new THREE.Mesh(g, m);
+                s.position.set(seg.lookAt.x, 0.1, seg.lookAt.z);
+                const label = createTextSprite(`${seg.lookAt.x.toFixed(2)}, ${seg.lookAt.z.toFixed(2)}`);
+                label.position.set(seg.lookAt.x, 0.6, seg.lookAt.z);
+                lookAtGroup.add(s);
+                lookAtGroup.add(label);
+                lookAtMarkers.push(s);
+            }
         }
 
         function moveSquare(delta) {
@@ -575,8 +627,34 @@
                 const dx2 = lookAtCfg.x - x;
                 const dz2 = lookAtCfg.z - z;
                 const yaw2 = Math.atan2(dx2, dz2);
-                const targetQuat2 = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, yaw2, 0));
-                robot.quaternion.slerp(targetQuat2, Math.min(1, 6 * delta));
+            const targetQuat2 = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, yaw2, 0));
+            robot.quaternion.slerp(targetQuat2, Math.min(1, 6 * delta));
+            if (settings && settings['show lookAt']) {
+                const p1 = new THREE.Vector3(x, 0, z);
+                const p2 = new THREE.Vector3(lookAtCfg.x, 0, lookAtCfg.z);
+                if (!lookAtLine) {
+                    const geometry = new THREE.BufferGeometry().setFromPoints([p1, p2]);
+                    const material = new THREE.LineBasicMaterial({ color: 0x00ffff });
+                    lookAtLine = new THREE.Line(geometry, material);
+                    scene.add(lookAtLine);
+                } else {
+                    lookAtLine.geometry.setFromPoints([p1, p2]);
+                }
+                lookAtLine.visible = true;
+                if (prevLookAtIndex !== currentSegment) {
+                    if (prevLookAtIndex >= 0 && lookAtMarkers[prevLookAtIndex]) {
+                        lookAtMarkers[prevLookAtIndex].material.color.setHex(0xff0000);
+                        lookAtMarkers[prevLookAtIndex].scale.set(1, 1, 1);
+                    }
+                    if (lookAtMarkers[currentSegment]) {
+                        lookAtMarkers[currentSegment].material.color.setHex(0xffff00);
+                        lookAtMarkers[currentSegment].scale.set(1.4, 1.4, 1.4);
+                    }
+                    prevLookAtIndex = currentSegment;
+                }
+            } else {
+                if (lookAtLine) lookAtLine.visible = false;
+            }
             }
             // 标签与门状态更新
             if (robotLabel) {
