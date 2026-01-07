@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>three.js webgl - animation - demo6</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<link type="text/css" rel="stylesheet" href="main.css">
+	</head>
+	<body>
+		<div id="container"></div>
+		<div id="info"></div>
+		<script type="importmap">
+			{
+				"imports": {
+					"three": "https://threejs.org/build/three.module.js",
+					"three/addons/": "https://threejs.org/examples/jsm/"
+				}
+			}
+		</script>
+		<script type="module">
+			import * as THREE from 'three';
+			import Stats from 'three/addons/libs/stats.module.js';
+			import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
+			import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+			import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+
+			let scene, renderer, camera, stats;
+			let model, skeleton, mixer, clock;
+			let walkAction, takeAction, trunLeftAction, trunRightAction, stopAction;
+			let actions = [], settings;
+			let singleStepMode = false;
+			let sizeOfNextStep = 0;
+			let currentAction = null;
+
+			init();
+
+			function init() {
+				const container = document.getElementById('container');
+
+				camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 100);
+				camera.position.set(1, 2, -3);
+				camera.lookAt(0, 1, 0);
+
+				clock = new THREE.Clock();
+
+				scene = new THREE.Scene();
+				scene.background = new THREE.Color(0xa0a0a0);
+				scene.fog = new THREE.Fog(0xa0a0a0, 10, 50);
+
+				const hemiLight = new THREE.HemisphereLight(0xffffff, 0x8d8d8d, 3);
+				hemiLight.position.set(0, 20, 0);
+				scene.add(hemiLight);
+
+				const dirLight = new THREE.DirectionalLight(0xffffff, 3);
+				dirLight.position.set(-3, 10, -10);
+				dirLight.castShadow = true;
+				dirLight.shadow.camera.top = 2;
+				dirLight.shadow.camera.bottom = -2;
+				dirLight.shadow.camera.left = -2;
+				dirLight.shadow.camera.right = 2;
+				dirLight.shadow.camera.near = 0.1;
+				dirLight.shadow.camera.far = 40;
+				scene.add(dirLight);
+
+				const mesh = new THREE.Mesh(
+					new THREE.PlaneGeometry(100, 100),
+					new THREE.MeshPhongMaterial({ color: 0xcbcbcb, depthWrite: false })
+				);
+				mesh.rotation.x = -Math.PI / 2;
+				mesh.receiveShadow = true;
+				scene.add(mesh);
+
+				const dracoLoader = new DRACOLoader();
+				dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.4.1/');
+
+				const loader = new GLTFLoader();
+				loader.setDRACOLoader(dracoLoader);
+				loader.load('./animation3.glb', function (gltf) {
+					model = gltf.scene;
+					model.scale.set(1, 1, 1);
+					scene.add(model);
+					model.traverse(function (object) { if (object.isMesh) object.castShadow = true; });
+
+					skeleton = new THREE.SkeletonHelper(model);
+					skeleton.visible = false;
+					scene.add(skeleton);
+
+					createPanel();
+
+					const animations = gltf.animations;
+					mixer = new THREE.AnimationMixer(model);
+
+					walkAction = mixer.clipAction(animations[4]);
+					stopAction = mixer.clipAction(animations[0]);
+					trunRightAction = mixer.clipAction(animations[3]);
+					trunLeftAction = mixer.clipAction(animations[2]);
+					takeAction = mixer.clipAction(animations[1]);
+
+					[stopAction, trunLeftAction, trunRightAction, takeAction].forEach(a => { if (a) { a.clampWhenFinished = true; a.setLoop(THREE.LoopOnce); } });
+
+					actions = [walkAction, takeAction, stopAction, trunLeftAction, trunRightAction];
+
+					activateWalkOnly();
+
+					renderer.setAnimationLoop(animate);
+				});
+
+				renderer = new THREE.WebGLRenderer({ antialias: true });
+				renderer.setPixelRatio(window.devicePixelRatio);
+				renderer.setSize(window.innerWidth, window.innerHeight);
+				renderer.shadowMap.enabled = true;
+				container.appendChild(renderer.domElement);
+
+				stats = new Stats();
+				container.appendChild(stats.dom);
+
+				window.addEventListener('resize', onWindowResize);
+			}
+
+			function setWeight(action, weight) {
+				if (!action) return;
+				action.enabled = true;
+				action.setEffectiveTimeScale(1);
+				action.setEffectiveWeight(weight);
+			}
+
+			function getWeightForAction(action) {
+				if (!settings) return 1;
+				if (action === walkAction) return settings['modify walk weight'];
+				if (action === takeAction) return settings['modify take weight'];
+				if (action === trunLeftAction) return settings['modify turn left weight'];
+				if (action === trunRightAction) return settings['modify turn right weight'];
+				if (action === stopAction) return settings['modify stop weight'];
+				return 1;
+			}
+
+			function transitionTo(endAction, duration = 0.5) {
+				if (!endAction) return;
+				if (!currentAction) {
+					endAction.reset().play();
+					currentAction = endAction;
+					return;
+				}
+				if (currentAction === endAction) return;
+				endAction.reset().play();
+				setWeight(endAction, getWeightForAction(endAction));
+				currentAction.crossFadeTo(endAction, duration, true);
+				currentAction = endAction;
+			}
+
+			function createPanel() {
+				const panel = new GUI({ width: 310 });
+				const folder1 = panel.addFolder('Visibility');
+				const folder2 = panel.addFolder('Activation/Deactivation');
+				const folder3 = panel.addFolder('Pausing/Stepping');
+				const folder4 = panel.addFolder('Crossfading');
+				const folder5 = panel.addFolder('Blend Weights');
+				const folder6 = panel.addFolder('General Speed');
+
+				settings = {
+					'show model': true,
+					'show skeleton': false,
+					'deactivate all': deactivateAllActions,
+					'activate all': activateWalkOnly,
+					'pause/continue': pauseContinue,
+					'make single step': toSingleStepMode,
+					'modify step size': 0.05,
+					'to walk': () => crossTo(walkAction),
+					'to take': () => crossTo(takeAction),
+					'to turn left': () => crossTo(trunLeftAction),
+					'to turn right': () => crossTo(trunRightAction),
+					'to stop': () => crossTo(stopAction),
+					'use default duration': true,
+					'set custom duration': 0.5,
+					'modify walk weight': 1.0,
+					'modify take weight': 0.8,
+					'modify turn left weight': 0.8,
+					'modify turn right weight': 0.8,
+					'modify stop weight': 0.6,
+					'modify time scale': 1.0
+				};
+
+				folder1.add(settings, 'show model').onChange(v => { if (model) model.visible = v; });
+				folder1.add(settings, 'show skeleton').onChange(v => { if (skeleton) skeleton.visible = v; });
+
+				folder2.add(settings, 'deactivate all');
+				folder2.add(settings, 'activate all');
+
+				folder3.add(settings, 'pause/continue');
+				folder3.add(settings, 'make single step');
+				folder3.add(settings, 'modify step size', 0.01, 0.1, 0.001);
+
+				folder4.add(settings, 'use default duration');
+				folder4.add(settings, 'set custom duration', 0, 10, 0.01);
+				folder4.add(settings, 'to walk');
+				folder4.add(settings, 'to take');
+				folder4.add(settings, 'to turn left');
+				folder4.add(settings, 'to turn right');
+				folder4.add(settings, 'to stop');
+
+				folder5.add(settings, 'modify walk weight', 0, 1, 0.01).listen().onChange(w => setWeight(walkAction, w));
+				folder5.add(settings, 'modify take weight', 0, 1, 0.01).listen().onChange(w => setWeight(takeAction, w));
+				folder5.add(settings, 'modify turn left weight', 0, 1, 0.01).listen().onChange(w => setWeight(trunLeftAction, w));
+				folder5.add(settings, 'modify turn right weight', 0, 1, 0.01).listen().onChange(w => setWeight(trunRightAction, w));
+				folder5.add(settings, 'modify stop weight', 0, 1, 0.01).listen().onChange(w => setWeight(stopAction, w));
+
+				folder6.add(settings, 'modify time scale', 0, 1.5, 0.01).onChange(modifyTimeScale);
+
+				folder1.open();
+				folder2.open();
+				folder3.open();
+				folder4.open();
+				folder5.open();
+				folder6.open();
+			}
+
+			function crossTo(action) {
+				const duration = settings['use default duration'] ? settings['set custom duration'] : settings['set custom duration'];
+				transitionTo(action, duration);
+			}
+
+			function modifyTimeScale(speed) {
+				if (mixer) mixer.timeScale = speed;
+			}
+
+			function deactivateAllActions() {
+				actions.forEach(a => { if (a) a.stop(); });
+			}
+
+			function activateWalkOnly() {
+				setWeight(walkAction, settings['modify walk weight']);
+				setWeight(takeAction, settings['modify take weight']);
+				setWeight(trunLeftAction, settings['modify turn left weight']);
+				setWeight(trunRightAction, settings['modify turn right weight']);
+				setWeight(stopAction, settings['modify stop weight']);
+				if (walkAction) {
+					walkAction.play();
+					currentAction = walkAction;
+				}
+			}
+
+			function pauseContinue() {
+				if (singleStepMode) {
+					singleStepMode = false;
+					unPauseAllActions();
+				} else {
+					if (!actions.length) return;
+					actions.forEach(a => { if (a) a.paused = !a.paused; });
+				}
+			}
+
+			function unPauseAllActions() {
+				actions.forEach(a => { if (a) a.paused = false; });
+			}
+
+			function toSingleStepMode() {
+				unPauseAllActions();
+				singleStepMode = true;
+				sizeOfNextStep = settings['modify step size'];
+			}
+
+			function onWindowResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize(window.innerWidth, window.innerHeight);
+			}
+
+			function animate() {
+				let mixerUpdateDelta = clock.getDelta();
+				if (singleStepMode) {
+					mixerUpdateDelta = sizeOfNextStep;
+					sizeOfNextStep = 0;
+				}
+				if (mixer) mixer.update(mixerUpdateDelta);
+				renderer.render(scene, camera);
+				if (stats) stats.update();
+			}
+		</script>
+	</body>
+</html>
