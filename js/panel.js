@@ -1,7 +1,7 @@
 export function createPanel({
     GUI,
     robot,
-    map,
+    skeleton,
     axesHelper,
     lookAtGroup,
     actions,
@@ -18,12 +18,12 @@ export function createPanel({
     const folder3 = panel.addFolder('Pausing/Stepping');
     const folder4 = panel.addFolder('Crossfading');
     const folder5 = panel.addFolder('Blend Weights');
-    const folder6 = panel.addFolder('General Speed');
+
     const settings = {
         'show robot': true,
-        'show map': true,
-        'show axes': true,
-        'show lookAt': true,
+        'show skeleton': false,
+        'show axes': false,
+        'show lookAt': false,
         'loop animation': false,
         'modify step size': 0.05,
         'use default duration': 0.5,
@@ -36,7 +36,7 @@ export function createPanel({
         'modify time scale': 1.0
     };
     folder1.add(settings, 'show robot').onChange(v => { if (robot) robot.visible = v; });
-    folder1.add(settings, 'show map').onChange(v => { if (map) map.visible = v; });
+    folder1.add(settings, 'show skeleton').onChange(v => { if (skeleton) skeleton.visible = v; });
     folder1.add(settings, 'show axes').onChange(v => { if (axesHelper) axesHelper.visible = v; });
     folder1.add(settings, 'show lookAt').onChange(v => { if (lookAtGroup) lookAtGroup.visible = v; });
     folder1.add(settings, 'loop animation');
@@ -57,6 +57,5 @@ export function createPanel({
     folder3.open();
     folder4.open();
     folder5.open();
-    folder6.open();
     return settings;
 }

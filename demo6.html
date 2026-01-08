@@ -25,6 +25,7 @@
 			import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 
 			let scene, renderer, camera, stats;
+			let axesHelper;
 			let model, skeleton, mixer, clock;
 			let walkAction, takeAction, trunLeftAction, trunRightAction, stopAction;
 			let actions = [], settings;
@@ -46,6 +47,8 @@
 				scene = new THREE.Scene();
 				scene.background = new THREE.Color(0xa0a0a0);
 				scene.fog = new THREE.Fog(0xa0a0a0, 10, 50);
+				axesHelper = new THREE.AxesHelper(3);
+				scene.add(axesHelper);
 
 				const hemiLight = new THREE.HemisphereLight(0xffffff, 0x8d8d8d, 3);
 				hemiLight.position.set(0, 20, 0);
@@ -81,11 +84,11 @@
 					scene.add(model);
 					model.traverse(function (object) { if (object.isMesh) object.castShadow = true; });
 
-					skeleton = new THREE.SkeletonHelper(model);
-					skeleton.visible = false;
-					scene.add(skeleton);
+				skeleton = new THREE.SkeletonHelper(model);
+				skeleton.visible = false;
+				scene.add(skeleton);
 
-					createPanel();
+				createPanel();
 
 					const animations = gltf.animations;
 					mixer = new THREE.AnimationMixer(model);
@@ -160,6 +163,7 @@
 				settings = {
 					'show model': true,
 					'show skeleton': false,
+					'show axes': true,
 					'deactivate all': deactivateAllActions,
 					'activate all': activateWalkOnly,
 					'pause/continue': pauseContinue,
@@ -182,6 +186,7 @@
 
 				folder1.add(settings, 'show model').onChange(v => { if (model) model.visible = v; });
 				folder1.add(settings, 'show skeleton').onChange(v => { if (skeleton) skeleton.visible = v; });
+				folder1.add(settings, 'show axes').onChange(v => { if (axesHelper) axesHelper.visible = v; });
 
 				folder2.add(settings, 'deactivate all');
 				folder2.add(settings, 'activate all');

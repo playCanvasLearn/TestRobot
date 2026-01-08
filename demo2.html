@@ -54,7 +54,7 @@
 
         const raycaster = new THREE.Raycaster();
         let scene, camera, renderer, controls;
-        let map, robot, mixer, walkAction, modelAll;
+        let map, robot, mixer, walkAction, modelAll, skeleton;
 
         let t = 0;
 
@@ -185,6 +185,10 @@
                 robot.scale.set(2, 2, 2);
                 scene.add(robot);
 
+                skeleton = new THREE.SkeletonHelper(robot);
+                skeleton.visible = false;
+                scene.add(skeleton);
+
                 mixer = new THREE.AnimationMixer(robot);
                 walkAction = mixer.clipAction(gltf.animations[4]); // walk 动画
                 // 添加停止动画
@@ -211,7 +215,7 @@
                 settings = createControlPanel({
                     GUI,
                     robot,
-                    map,
+                    skeleton,
                     axesHelper,
                     lookAtGroup,
                     actions,
