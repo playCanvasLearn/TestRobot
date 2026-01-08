@@ -225,13 +225,13 @@
                 });
                 if (mixer) {
                     // 监听一次性动作完成：解除冻结并淡入回“行走”，保持流程连贯
-/*                    mixer.addEventListener('finished', (event) => {
+                    mixer.addEventListener('finished', (event) => {
                         if (waitAction && event.action === waitAction) {
                             holdMovement = false;
                             waitAction = null;
-                            transitionTo(walkAction, getCrossFadeDuration());
+                            //transitionTo(walkAction, getCrossFadeDuration());
                         }
-                    });*/
+                    });
                 }
             });
         }
@@ -355,7 +355,7 @@
 
             const lookAtCfg = positionsAnimation[currentSegment].lookAt;
             if (lookAtCfg) {
-                //robot.lookAt(lookAtCfg.x, 0, lookAtCfg.z);
+                robot.lookAt(lookAtCfg.x, 0, lookAtCfg.z);
             }
             // 标签与门状态更新
             if (robotLabel) {
