@@ -34,47 +34,49 @@
 
     <script type="module">
         const positionsAnimation = [
-            { showMessage: '去拿料', turn: '', position: { x: 1.8, y: 0, z: 2.5 }, lookAt: { x: 1.8, y: 0, z: 6 } },
-            { showMessage: '去拿料', turn: 'trunRight', position: { x: 1.8, y: 0, z: 4.5 }, lookAt: { x: -3.8, y: 0, z: 6 } },
-            { showMessage: '拿料中', turn: 'pause', position: { x: 1.8, y: 0, z: 4.5 }, lookAt: { x: -3.8, y: 0, z: 6 } },
-            { showMessage: '去加工', turn: 'trunRight', position: { x: 1.8, y: 0, z: 4.5 }, lookAt: { x: 1.8, y: 0, z: -6 } },
-            /*{ showMessage: '去加工', turn: '', position: { x: 1.7, y: 0, z: 4.5 }, lookAt: { x: 1.7, y: 0, z: 2.5 } },
-            { showMessage: '去加工', turn: '', position: { x: 1.7, y: 0, z: 2.5 }, lookAt: { x: 1.7, y: 0, z: 0.5 } },
-            { showMessage: '去加工', turn: '', position: { x: 1.7, y: 0, z: 0.5 }, lookAt: { x: 1.7, y: 0, z: -1.1 } },
-            { showMessage: '去加工', turn: 'trunLeft', position: { x: 1.7, y: 0, z: -1.1 }, lookAt: { x: 1.7, y: 0, z: -1.1 } },
-            { showMessage: '去加工', turn: '', position: { x: 1.7, y: 0, z: -1.1 }, lookAt: { x: 0.4, y: 0, z: -0.9 } },
-            { showMessage: '加工中', turn: 'pause', position: { x: 0.4, y: 0, z: -0.9 }, lookAt: { x: 0.4, y: 0, z: -0.9 } },
-            { showMessage: '去检测', turn: 'trunRight', position: { x: 0.4, y: 0, z: -0.9 }, lookAt: { x: 0.4, y: 0, z: -0.9 } },
-            { showMessage: '去检测', turn: '', position: { x: 0.4, y: 0, z: -0.9 }, lookAt: { x: 0.3, y: 0, z: -1.9 } },
-            { showMessage: '去检测', turn: '', position: { x: 0.3, y: 0, z: -1.9 }, lookAt: { x: 0.3, y: 0, z: -3.9 } },
-            { showMessage: '去检测', turn: '', position: { x: 0.3, y: 0, z: -3.9 }, lookAt: { x: 0.3, y: 0, z: -6.4 } },
-            { showMessage: '去检测', turn: 'trunLeft', position: { x: 0.3, y: 0, z: -6.4 }, lookAt: { x: 0.31, y: 0, z: -6.5 } },
-            { showMessage: '检测中', turn: 'pause', position: { x: 0.31, y: 0, z: -6.5 }, lookAt: { x: 0.3, y: 0, z: -6.5 } },
-            { showMessage: '不合格', turn: 'trunLeft', position: { x: 0.3, y: 0, z: -6.5 }, lookAt: { x: 0.3, y: 0, z: -6.5 } },
-            { showMessage: '去加工', turn: '', position: { x: 0.3, y: 0, z: -6.5 }, lookAt: { x: 0.3, y: 0, z: -3.5 } },
-            { showMessage: '去加工', turn: '', position: { x: 0.3, y: 0, z: -3.5 }, lookAt: { x: 0.31, y: 0, z: -0.9 } },
-            { showMessage: '去加工', turn: 'trunRight', position: { x: 0.31, y: 0, z: -0.9 }, lookAt: { x: 0.31, y: 0, z: -0.9 } },
-            { showMessage: '加工中', turn: 'pause', position: { x: 0.31, y: 0, z: -0.9 }, lookAt: { x: 0.3, y: 0, z: -0.9 } },
-            { showMessage: '去检测', turn: 'trunRight', position: { x: 0.3, y: 0, z: -0.9 }, lookAt: { x: 0.3, y: 0, z: -0.9 } },
-            { showMessage: '去检测', turn: '', position: { x: 0.3, y: 0, z: -0.9 }, lookAt: { x: 0.3, y: 0, z: -1.9 } },
-            { showMessage: '去检测', turn: '', position: { x: 0.3, y: 0, z: -1.9 }, lookAt: { x: 0.3, y: 0, z: -3.9 } },
-            { showMessage: '去检测', turn: '', position: { x: 0.3, y: 0, z: -3.9 }, lookAt: { x: 0.3, y: 0, z: -6.4 } },
-            { showMessage: '去检测', turn: 'trunLeft', position: { x: 0.3, y: 0, z: -6.4 }, lookAt: { x: 0.31, y: 0, z: -6.5 } },
-            { showMessage: '检测中', turn: 'pause', position: { x: 0.31, y: 0, z: -6.5 }, lookAt: { x: 0.3, y: 0, z: -6.5 } },
-            { showMessage: '合格', turn: 'trunLeft', position: { x: 0.3, y: 0, z: -6.5 }, lookAt: { x: 0.29, y: 0, z: -6.5 } },
-            { showMessage: '去放料', turn: '', position: { x: 0.29, y: 0, z: -6.5 }, lookAt: { x: 0.29, y: 0, z: -3.7 } },
-            { showMessage: '去放料', turn: '', position: { x: 0.29, y: 0, z: -3.7 }, lookAt: { x: 0.3, y: 0, z: 0 } },
-            { showMessage: '去放料', turn: '', position: { x: 0.3, y: 0, z: 0 }, lookAt: { x: 0.3, y: 0, z: 2 } },
-            { showMessage: '去放料', turn: '', position: { x: 0.3, y: 0, z: 2 }, lookAt: { x: 0.3, y: 0, z: 2.7 } },
-            { showMessage: '去放料', turn: 'trunRight', position: { x: 0.3, y: 0, z: 2.7 }, lookAt: { x: 0.3, y: 0, z: 2.7 } },
-            { showMessage: '去放料', turn: '', position: { x: 0.3, y: 0, z: 2.7 }, lookAt: { x: -1, y: 0, z: 2.7 } },
-            { showMessage: '去放料', turn: '', position: { x: -1, y: 0, z: 2.7 }, lookAt: { x: -1, y: 0, z: 2.7 } },
-            { showMessage: '去放料', turn: 'trunLeft', position: { x: -1, y: 0, z: 2.7 }, lookAt: { x: -1, y: 0, z: 2.7 } },
-            { showMessage: '去放料', turn: '', position: { x: -1, y: 0, z: 2.7 }, lookAt: { x: -1.2, y: 0, z: 4.5 } },
-            { showMessage: '放料中', turn: 'pause', position: { x: -1.2, y: 0, z: 4.5 }, lookAt: { x: -1.3, y: 0, z: 4.5 } },
-            { showMessage: '去拿料', turn: '', position: { x: -1.3, y: 0, z: 4.5 }, lookAt: { x: -1.3, y: 0, z: 2.7 } },
-            { showMessage: '去拿料', turn: '', position: { x: -1.3, y: 0, z: 2.7 }, lookAt: { x: 1.8, y: 0, z: 2.5 } },
-            { showMessage: '去拿料', turn: '', position: { x: 1.8, y: 0, z: 2.5 }, lookAt: { x: 1.8, y: 0, z: 4.5 } }*/
+            // { showMessage: '', turn: 'walking_West', position: { x: 1.3, y: 0, z: 3.3 } }, //初始位置
+            { showMessage: '去拿料', turn: '', position: { x: 1.8, y: 0, z: 2.5 } },
+            // { showMessage: '去拿料', turn: 'pause', position: { x: 1.8, y: 0, z: 4.5 } },
+            { showMessage: '去拿料', turn: 'trunRight', position: { x: 1.8, y: 0, z: 4.5 } },
+            { showMessage: '拿料中', turn: 'pause', position: { x: 1.8, y: 0, z: 4.5 } },
+            { showMessage: '去加工', turn: 'trunRight', position: { x: 1.79, y: 0, z: 4.5 } },
+            { showMessage: '去加工', turn: '', position: { x: 1.7, y: 0, z: 4.5 } },
+            { showMessage: '去加工', turn: '', position: { x: 1.7, y: 0, z: 2.5 } },
+            { showMessage: '去加工', turn: '', position: { x: 1.7, y: 0, z: 0.5 } },
+            { showMessage: '去加工', turn: 'trunLeft', position: { x: 1.7, y: 0, z: -1.1 } },
+            { showMessage: '去加工', turn: '', position: { x: 1.7, y: 0, z: -1.1 } },
+            { showMessage: '加工中', turn: 'pause', position: { x: 0.4, y: 0, z: -0.9 } },
+            { showMessage: '去检测', turn: 'trunRight', position: { x: 0.4, y: 0, z: -0.9 } },
+            { showMessage: '去检测', turn: '', position: { x: 0.4, y: 0, z: -0.9 } },
+            { showMessage: '去检测', turn: '', position: { x: 0.3, y: 0, z: -1.9 } },
+            { showMessage: '去检测', turn: '', position: { x: 0.3, y: 0, z: -3.9 } },
+            { showMessage: '去检测', turn: 'trunLeft', position: { x: 0.3, y: 0, z: -6.4 } },
+            { showMessage: '检测中', turn: 'pause', position: { x: 0.31, y: 0, z: -6.5 } },
+            { showMessage: '不合格', turn: 'trunLeft', position: { x: 0.3, y: 0, z: -6.5 } },
+            { showMessage: '去加工', turn: '', position: { x: 0.3, y: 0, z: -6.5 } },
+            { showMessage: '去加工', turn: '', position: { x: 0.3, y: 0, z: -3.5 } },
+            { showMessage: '去加工', turn: 'trunRight', position: { x: 0.31, y: 0, z: -0.9 } },
+            { showMessage: '加工中', turn: 'pause', position: { x: 0.31, y: 0, z: -0.9 } },
+            { showMessage: '去检测', turn: 'trunRight', position: { x: 0.3, y: 0, z: -0.9 } },
+            { showMessage: '去检测', turn: '', position: { x: 0.3, y: 0, z: -0.9 } },
+            { showMessage: '去检测', turn: '', position: { x: 0.3, y: 0, z: -1.9 } },
+            { showMessage: '去检测', turn: '', position: { x: 0.3, y: 0, z: -3.9 } },
+            { showMessage: '去检测', turn: 'trunLeft', position: { x: 0.3, y: 0, z: -6.4 } },
+            { showMessage: '检测中', turn: 'pause', position: { x: 0.31, y: 0, z: -6.5 } },
+            { showMessage: '合格', turn: 'trunLeft', position: { x: 0.3, y: 0, z: -6.5 } },
+            { showMessage: '去放料', turn: '', position: { x: 0.29, y: 0, z: -6.5 } },
+            { showMessage: '去放料', turn: '', position: { x: 0.29, y: 0, z: -3.7 } },
+            { showMessage: '去放料', turn: '', position: { x: 0.3, y: 0, z: 0 } },
+            { showMessage: '去放料', turn: '', position: { x: 0.3, y: 0, z: 2 } },
+            { showMessage: '去放料', turn: 'trunRight', position: { x: 0.3, y: 0, z: 2.7 } },
+            { showMessage: '去放料', turn: '', position: { x: 0.3, y: 0, z: 2.7 } },
+            { showMessage: '去放料', turn: '', position: { x: -1, y: 0, z: 2.7 } },
+            { showMessage: '去放料', turn: 'trunLeft', position: { x: -1, y: 0, z: 2.7 } },
+            { showMessage: '去放料', turn: '', position: { x: -1, y: 0, z: 2.7 } },
+            { showMessage: '放料中', turn: 'pause', position: { x: -1.2, y: 0, z: 4.5 } },
+            { showMessage: '去拿料', turn: '', position: { x: -1.3, y: 0, z: 4.5 } },
+            { showMessage: '去拿料', turn: '', position: { x: -1.3, y: 0, z: 2.7 } },
+            { showMessage: '去拿料', turn: '', position: { x: 1.8, y: 0, z: 2.5 } }, //初始位置
         ];
 
         import * as THREE from 'three';
@@ -83,8 +85,7 @@
         import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
         import { DRACOLoader } from './js/DRACOLoader.js';
         import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
-        import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
-        import { setupChartTexture } from './js/chartTexture.js';
+        import * as echarts from 'echarts';
 
         const dracoLoader = new DRACOLoader();
         dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.4.1/');
@@ -114,7 +115,9 @@
         let robotLabel = null;
         let currentLabelContent = '';
 
-
+        let chartInstance = null;
+        let chartData = [];
+        let lastChartDataTime = 0;
 
         let stopAction = null;
         let takeAction = null;
@@ -123,18 +126,14 @@
         let trunRightAction = null;
 
         let currentAction = null;
-        let actions = [];
-        let settings;
-        let singleStepMode = false;
-        let sizeOfNextStep = 0;
-        let axesHelper = null;
-        let lookAtGroup = null;
-        // 上一次路径段索引（用于“段触发”，避免每帧重复切换动作）
-        let prevSegmentIndex = -1;
-        // 冻结位移（播放一次性动作期间暂停移动插值，动作完成后恢复）
-        let holdMovement = false;
-        // 当前等待完成的一次性动作（转身/拿取/停等）
-        let waitAction = null;
+
+        let animationFrameCounts = {
+            stop: 0,
+            trunLeft: 0,
+            trunRight: 0,
+            walk: 0
+        };
+
 
         function init() {
             scene = new THREE.Scene();
@@ -145,13 +144,7 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
             controls = new OrbitControls(camera, renderer.domElement);
 
-            axesHelper = new THREE.AxesHelper(3);
-            scene.add(axesHelper);
-            axesHelper.visible = false;
-            lookAtGroup = new THREE.Group();
-            scene.add(lookAtGroup);
-            lookAtGroup.visible = false;
-
+            // 灯光
             const light = new THREE.DirectionalLight(0xffffff, 4.5);
             light.position.set(4, 8, 7);
             scene.add(light);
@@ -180,7 +173,6 @@
             loadRobot();
             createRobotLabel(); // 创建机器人标签
             window.addEventListener("resize", onResize);
-            buildLookAtMarkers();
         }
 
         // 创建机器人头顶标签的函数
@@ -263,13 +255,6 @@
 
             // 更新纹理
             robotLabel.material.map.needsUpdate = true;
-            if (scene) {
-                scene.traverse((child) => {
-                    if (child.isMesh && child.chartController) {
-                        child.chartController.setTitle(currentLabelContent);
-                    }
-                });
-            }
         }
 
         function loadMap() {
@@ -317,6 +302,184 @@
             });
         }
 
+        // 创建图表纹理函数
+        function setupChartTexture(screenMesh) {
+            // 创建canvas用于绘制图表
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 256;
+            canvas.style.display = 'none';
+            document.body.appendChild(canvas);
+
+            // 初始化ECharts
+            chartInstance = echarts.init(canvas, null, { renderer: 'canvas' });
+
+            // 初始化图表数据
+            initializeChartData();
+
+            // 绘制初始图表
+            updateChart();
+
+            // 每5秒更新一次数据
+            setInterval(() => {
+                updateChartData();
+                updateChart();
+            }, 5000);
+
+            // 创建纹理
+            const chartTexture = new THREE.CanvasTexture(canvas);
+            chartTexture.minFilter = THREE.LinearFilter;
+            chartTexture.magFilter = THREE.LinearFilter;
+            chartTexture.format = THREE.RGBAFormat;
+            chartTexture.generateMipmaps = false;
+            chartTexture.wrapS = THREE.ClampToEdgeWrapping;
+            chartTexture.wrapT = THREE.ClampToEdgeWrapping;
+
+            // 检查并添加UV坐标（如果没有的话）
+            if (!screenMesh.geometry.attributes.uv) {
+                generateUVCoordinates(screenMesh.geometry);
+            }
+
+            // 为屏幕创建专用材质
+            if (screenMesh.material) {
+                const chartMaterial = new THREE.MeshBasicMaterial({
+                    map: chartTexture,
+                    transparent: false
+                });
+
+                screenMesh.material = chartMaterial;
+                screenMesh.material.needsUpdate = true;
+            }
+
+            // 保存纹理引用以便更新
+            screenMesh.chartTexture = chartTexture;
+            screenMesh.canvas = canvas;
+        }
+
+        // 初始化图表数据
+        function initializeChartData() {
+            chartData = [];
+            const now = Date.now();
+            for (let i = 9; i >= 0; i--) {
+                chartData.push({
+                    time: now - i * 5000,
+                    value: Math.random() * 100
+                });
+            }
+        }
+
+        // 更新图表数据
+        function updateChartData() {
+            // 添加新数据点
+            chartData.push({
+                time: Date.now(),
+                value: Math.random() * 100
+            });
+
+            // 保持最多10个数据点
+            if (chartData.length > 10) {
+                chartData.shift();
+            }
+        }
+
+        // 更新图表显示
+        function updateChart() {
+            if (!chartInstance) return;
+
+            // 格式化时间显示
+            const formattedData = chartData.map(item => ({
+                time: new Date(item.time).toLocaleTimeString('zh-CN', { hour12: false }),
+                value: item.value.toFixed(2)
+            }));
+
+            // 获取当前显示的消息内容作为图表标题
+            let chartTitle = '实时数据监控:';
+            if (currentLabelContent) {
+                chartTitle = currentLabelContent;
+            }
+            // 配置图表选项
+            const option = {
+                title: {
+                    text: chartTitle,
+                    textStyle: {
+                        color: '#fff',
+                        fontSize: 14
+                    },
+                    left: '10%',
+                    top: '20%'
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    textStyle: {
+                        color: '#fff'
+                    },
+                    backgroundColor: 'rgba(0,0,0,0.2)'
+                },
+                xAxis: {
+                    type: 'category',
+                    data: formattedData.map(item => item.time),
+                    axisLine: { lineStyle: { color: '#fff' } },
+                    axisLabel: {
+                        color: '#fff',
+                        fontSize: 10,
+                        rotate: 45
+                    }
+                },
+                yAxis: {
+                    type: 'value',
+                    axisLine: { lineStyle: { color: '#fff' } },
+                    axisLabel: { color: '#fff' },
+                    splitLine: { show: false }
+                },
+                series: [{
+                    data: formattedData.map(item => item.value),
+                    type: 'line',
+                    smooth: true,
+                    lineStyle: { color: '#00ff00' },
+                    itemStyle: { color: '#00ff00' },
+                }],
+                backgroundColor: 'rgba(0,0,0,0.2)',
+                grid: {
+                    left: '12%',
+                    right: '10%',
+                    top: '30%',
+                    bottom: '35%'
+                }
+            };
+
+            chartInstance.setOption(option, true);
+
+            // 强制更新纹理
+            if (scene) {
+                scene.traverse((child) => {
+                    if (child.isMesh && child.name && child.name.includes('屏幕') && child.canvas) {
+                        child.chartTexture.needsUpdate = true;
+                    }
+                });
+            }
+        }
+
+        // 生成默认UV坐标的函数
+        function generateUVCoordinates(geometry) {
+            const positionAttribute = geometry.attributes.position;
+            const vertexCount = positionAttribute.count;
+
+            // 创建UV坐标数组
+            const uvArray = new Float32Array(vertexCount * 2);
+
+            // 为每个顶点生成简单的UV坐标（这里假设是矩形屏幕）
+            for (let i = 0; i < vertexCount; i++) {
+                // 简单的UV映射，可以根据实际模型调整
+                uvArray[i * 2] = (positionAttribute.getX(i) + 1) / 2;     // U坐标
+                uvArray[i * 2 + 1] = (positionAttribute.getY(i) + 1) / 2; // V坐标
+            }
+
+            // 添加UV属性到几何体
+            geometry.setAttribute('uv', new THREE.BufferAttribute(uvArray, 2));
+            geometry.attributes.uv.needsUpdate = true;
+
+        }
+
         // 载入机器人
         function loadRobot() {
             gltfLoader.load("./animation3.glb", (gltf) => {
@@ -335,6 +498,7 @@
                 // 添加拿取动画
                 takeAction = mixer.clipAction(gltf.animations[1]);
 
+
                 // 为所有动画设置一次性播放并停留最后一帧
                 [stopAction, trunLeftAction, trunRightAction, takeAction].forEach(action => {
                     if (action) {
@@ -343,147 +507,29 @@
                     }
                 });
 
+                if (walkAction) {
+                    walkAction.setDuration(5);  // 5秒内完成
+                }
+
+                if (takeAction) {
+                    takeAction.setDuration(5);  // 5秒内完成
+                }
+
+                if (stopAction) {
+                    stopAction.setDuration(5);  // 5秒内完成
+                }
+
+                if (trunLeftAction) {
+                    trunLeftAction.setDuration(5);  // 5秒内完成
+                }
+                if (trunRightAction) {
+                    trunRightAction.setDuration(5); // 5秒内完成
+                }
+
                 // 初始化当前动作为行走动画
                 currentAction = walkAction;
                 walkAction.play();
-                actions = [walkAction, takeAction, stopAction, trunLeftAction, trunRightAction];
-                createPanel();
-                if (mixer) {
-                    // 监听一次性动作完成：解除冻结并淡入回“行走”，保持流程连贯
-/*                    mixer.addEventListener('finished', (event) => {
-                        if (waitAction && event.action === waitAction) {
-                            holdMovement = false;
-                            waitAction = null;
-                            transitionTo(walkAction, getCrossFadeDuration());
-                        }
-                    });*/
-                }
             });
-        }
-
-        function setWeight(action, weight) {
-            if (!action) return;
-            action.enabled = true;
-            action.setEffectiveTimeScale(1);
-            action.setEffectiveWeight(weight);
-        }
-
-        function getWeightForAction(action) {
-            if (!settings) return 1;
-            if (action === walkAction) return settings['walk weight'];
-            if (action === takeAction) return settings['take weight'];
-            if (action === trunLeftAction) return settings['turn left weight'];
-            if (action === trunRightAction) return settings['turn right weight'];
-            if (action === stopAction) return settings['stop weight'];
-            return 1;
-        }
-
-        function transitionTo(endAction, duration = 0.5) {
-            // 统一的动作切换入口：重置目标动作，设置权重，使用 crossFadeTo 做淡入淡出
-            if (!endAction) return;
-            if (!currentAction) {
-                endAction.reset().play();
-                currentAction = endAction;
-                return;
-            }
-            if (currentAction === endAction) return;
-            endAction.reset().play();
-            setWeight(endAction, getWeightForAction(endAction));
-            currentAction.crossFadeTo(endAction, duration, true);
-            currentAction = endAction;
-        }
-
-        function createPanel() {
-            const panel = new GUI({ width: 310 });
-            const folder1 = panel.addFolder('Visibility');
-            const folder3 = panel.addFolder('Pausing/Stepping');
-            const folder4 = panel.addFolder('Crossfading');
-            const folder5 = panel.addFolder('Blend Weights');
-            const folder6 = panel.addFolder('General Speed');
-
-            settings = {
-                'show robot': true,
-                'show map': true,
-                'show axes': true,
-                'show lookAt': true,
-                'loop animation': false,
-                'pause/continue': pauseContinue,
-                'make single step': toSingleStepMode,
-                'modify step size': 0.05,
-                'use default duration': 0.5,
-                'set custom duration': 0.5,
-                'walk weight': 1.0,
-                'take weight': 0.6,
-                'turn left weight': 0.8,
-                'turn right weight': 0.8,
-                'stop weight': 0.4,
-                'modify time scale': 1.0
-            };
-
-            folder1.add(settings, 'show robot').onChange(v => { if (robot) robot.visible = v; });
-            folder1.add(settings, 'show map').onChange(v => { if (map) map.visible = v; });
-            folder1.add(settings, 'show axes').onChange(v => { if (axesHelper) axesHelper.visible = v; });
-            folder1.add(settings, 'show lookAt').onChange(v => { if (lookAtGroup) lookAtGroup.visible = v; });
-            folder1.add(settings, 'loop animation');
-
-            folder3.add(settings, 'pause/continue');
-            folder3.add(settings, 'make single step');
-            folder3.add(settings, 'modify step size', 0.01, 0.1, 0.001);
-
-            folder4.add(settings, 'use default duration');
-            folder4.add(settings, 'set custom duration', 0, 10, 0.01);
-            folder4.add({ f: () => crossTo(walkAction) }, 'f').name('to walk');
-            folder4.add({ f: () => crossTo(takeAction) }, 'f').name('to take');
-            folder4.add({ f: () => crossTo(trunLeftAction) }, 'f').name('to turn left');
-            folder4.add({ f: () => crossTo(trunRightAction) }, 'f').name('to turn right');
-            folder4.add({ f: () => crossTo(stopAction) }, 'f').name('to stop');
-
-            folder5.add(settings, 'walk weight', 0, 1, 0.01).listen().onChange(w => setWeight(walkAction, w));
-            folder5.add(settings, 'take weight', 0, 1, 0.01).listen().onChange(w => setWeight(takeAction, w));
-            folder5.add(settings, 'turn left weight', 0, 1, 0.01).listen().onChange(w => setWeight(trunLeftAction, w));
-            folder5.add(settings, 'turn right weight', 0, 1, 0.01).listen().onChange(w => setWeight(trunRightAction, w));
-            folder5.add(settings, 'stop weight', 0, 1, 0.01).listen().onChange(w => setWeight(stopAction, w));
-
-            folder6.add(settings, 'modify time scale', 0, 1.5, 0.01).onChange(modifyTimeScale);
-
-            folder1.open();
-            folder3.open();
-            folder4.open();
-            folder5.open();
-            folder6.open();
-        }
-
-        function crossTo(action) {
-            const duration = settings['use default duration'] ? settings['set custom duration'] : settings['set custom duration'];
-            transitionTo(action, duration);
-        }
-
-        function modifyTimeScale(speed) {
-            if (mixer) mixer.timeScale = speed;
-        }
-
-        function pauseContinue() {
-            if (singleStepMode) {
-                singleStepMode = false;
-                unPauseAllActions();
-            } else {
-                if (!actions.length) return;
-                actions[0] && actions[0].paused ? unPauseAllActions() : pauseAllActions();
-            }
-        }
-
-        function pauseAllActions() {
-            actions.forEach(a => { if (a) a.paused = true; });
-        }
-
-        function unPauseAllActions() {
-            actions.forEach(a => { if (a) a.paused = false; });
-        }
-
-        function toSingleStepMode() {
-            unPauseAllActions();
-            singleStepMode = true;
-            sizeOfNextStep = settings['modify step size'];
         }
 
         function onResize() {
@@ -505,110 +551,84 @@
                 const object = intersects[0].object;
                 // 获取点击位置
                 const intersectPoint = intersects[0].point;
-                console.log('Intersection point:', intersectPoint);
+                // console.log('Intersection point:', intersectPoint);
             }
         };
         window.addEventListener('click', handleClick);
 
-        function getCrossFadeDuration() {
-            // 过渡时长：优先使用面板设置；没有面板时使用默认值 0.5s
-            return settings && settings['use default duration'] ? settings['set custom duration'] : settings ? settings['set custom duration'] : 0.5;
-        }
-        function createTextSprite(text) {
-            const canvas = document.createElement('canvas');
-            canvas.width = 128;
-            canvas.height = 64;
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = 'rgba(0,0,0,0.5)';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = 'white';
-            ctx.font = '20px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(text, canvas.width / 2, canvas.height / 2);
-            const texture = new THREE.CanvasTexture(canvas);
-            const material = new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false });
-            const sprite = new THREE.Sprite(material);
-            sprite.scale.set(2, 1, 1);
-            return sprite;
-        }
-        function buildLookAtMarkers() {
-            lookAtGroup.clear();
-            for (let i = 0; i < positionsAnimation.length; i++) {
-                const seg = positionsAnimation[i];
-                if (!seg.lookAt) continue;
-                const g = new THREE.SphereGeometry(0.12, 16, 16);
-                const m = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-                const s = new THREE.Mesh(g, m);
-                s.position.set(seg.lookAt.x, 0.1, seg.lookAt.z);
-                const label = createTextSprite(`${seg.lookAt.x.toFixed(2)}, ${seg.lookAt.z.toFixed(2)}`);
-                label.position.set(seg.lookAt.x, 0.6, seg.lookAt.z);
-                lookAtGroup.add(s);
-                lookAtGroup.add(label);
-            }
-        }
 
         function moveSquare(delta) {
-            // 每段固定 5 秒：按 delta 推进时间；冻结期间不推进（保持原地播放一次性动作）
-            const segmentTime = 5;
-            if (!holdMovement) {
-                t += delta;
-            }
+            // if (isPaused) return; // 如果正在暂停则不执行移动逻辑
 
-            // 当前段索引与插值
+            const segmentTime = 5;
+            t += delta;
+
             const progress = t / segmentTime;
             const currentIndex = Math.floor(progress);
             const currentSegment = currentIndex % positionsAnimation.length;
-
-            // 确定下一段索引：如果不循环且已是最后一段，则不再回到起点（保持在原地）
-            let nextIndex = (currentSegment + 1) % positionsAnimation.length;
-            if (!settings['loop animation'] && currentSegment === positionsAnimation.length - 1) {
-                nextIndex = currentSegment;
-            }
-
+            const nextIndex = (currentSegment + 1) % positionsAnimation.length;
             const interpolation = progress - currentIndex;
             const currentPos = positionsAnimation[currentSegment].position;
             const nextPos = positionsAnimation[nextIndex].position;
-            // 位置插值（x、z）
             const x = currentPos.x + (nextPos.x - currentPos.x) * interpolation;
             const z = currentPos.z + (nextPos.z - currentPos.z) * interpolation;
             robot.position.set(x, 0, z);
-            // 段触发：仅在段索引变化时切换动作，避免每帧抖动
-            if (prevSegmentIndex !== currentSegment) {
-                console.log(currentSegment)
-                prevSegmentIndex = currentSegment;
-                const crossFadeDuration = getCrossFadeDuration();
-                const turn = positionsAnimation[currentSegment].turn;
-                if (turn === 'trunLeft') {
-                    holdMovement = true;             // 冻结位移
-                    waitAction = trunLeftAction;     // 等待转身完成
-                    transitionTo(trunLeftAction, crossFadeDuration);
-                } else if (turn === 'trunRight') {
-                    holdMovement = true;
-                    waitAction = trunRightAction;
-                    transitionTo(trunRightAction, crossFadeDuration);
-                } else if (turn === 'pause') {
-                    holdMovement = true;
-                    waitAction = takeAction;
-                    transitionTo(takeAction, crossFadeDuration);
-                } else {
-                    // 普通段：恢复位移与行走
-                    holdMovement = false;
-                    waitAction = null;
-                    transitionTo(walkAction, crossFadeDuration);
+
+            // 动画过渡时间（秒）
+            const crossFadeDuration = 0.5;
+
+            // 根据 turn 值播放相应的转向动画
+            if (positionsAnimation[currentSegment].turn === 'trunLeft') {
+                // 播放左转动画
+                if (trunLeftAction) {
+                    trunLeftAction.play();
+                    takeAction.stop();
+                    walkAction.stop();
+                }
+            } else if (positionsAnimation[currentSegment].turn === 'trunRight') {
+                // 播放右转动画
+                if (trunRightAction) {
+                    trunRightAction.play();
+                    walkAction.stop();
+                    takeAction.stop();
+
+                }
+            } else if (positionsAnimation[currentSegment].turn === 'pause') {
+                // 播放停止动画
+                if (stopAction) {
+                    takeAction.play();
+                    trunRightAction.stop();
+                    trunLeftAction.stop();
+                    walkAction.stop();
+                    // takeAction.stop();
+
+                }
+            } else if (positionsAnimation[currentSegment].turn === '') {
+                // 恢复行走动画
+
+                if (walkAction) {
+                    // 只有当前没有运行其他动画时才播放行走动画
+                    walkAction.play();
+                    trunRightAction.stop();
+                    trunLeftAction.stop();
+                    takeAction.stop();
+
+
                 }
             }
 
-            const lookAtCfg = positionsAnimation[currentSegment].lookAt;
-            if (lookAtCfg) {
-                //robot.lookAt(lookAtCfg.x, 0, lookAtCfg.z);
+            if (Math.abs(nextPos.x - currentPos.x) > 0.01 || Math.abs(nextPos.z - currentPos.z) > 0.01) {
+                robot.lookAt(nextPos.x, 0, nextPos.z);
             }
-            // 标签与门状态更新
+            // 更新机器人标签位置和内容
             if (robotLabel) {
-                robotLabel.position.set(x, 4, z);
+                // 设置标签位置在机器人头顶
+                robotLabel.position.set(x, 4, z); // Y轴稍微高于机器人
+                // 更新标签内容
                 updateLabelContent(positionsAnimation[currentSegment].showMessage);
             }
+
+            // 判断当前状态并控制门的开合
             updateDoorState(positionsAnimation[currentSegment].showMessage);
         }
 
@@ -648,24 +668,22 @@
         function animate() {
             requestAnimationFrame(animate);
             const now = performance.now();
-            let delta = (now - last) / 1000;
+            const delta = (now - last) / 1000;
             last = now;
             if (robot) {
-                if (singleStepMode) {
-                    delta = sizeOfNextStep;
-                    sizeOfNextStep = 0;
-                }
                 if (mixer) mixer.update(delta);
                 moveSquare(delta);
             }
             // 更新门的位置
             updateDoors(delta);
             // 更新图表纹理
-            scene.traverse((child) => {
-                if (child.isMesh && child.chartTexture) {
-                    child.chartTexture.needsUpdate = true;
-                }
-            });
+            if (chartInstance) {
+                scene.traverse((child) => {
+                    if (child.isMesh && child.name && child.name.includes('屏幕') && child.chartTexture) {
+                        child.chartTexture.needsUpdate = true;
+                    }
+                });
+            }
             renderer.render(scene, camera);
         }
 
