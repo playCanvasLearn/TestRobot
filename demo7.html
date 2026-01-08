@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>three.js webgl - animation - demo6</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <link type="text/css" rel="stylesheet" href="main.css">
+</head>
+<body>
+<div id="container"></div>
+<div id="info"></div>
+
+<script type="importmap">
+{
+    "imports": {
+        "three": "https://threejs.org/build/three.module.js",
+        "three/addons/": "https://threejs.org/examples/jsm/"
+    }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import Stats from 'three/addons/libs/stats.module.js';
+import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+
+let scene, renderer, camera, stats;
+let model, skeleton, mixer, clock;
+let walkAction, takeAction, trunLeftAction, trunRightAction, stopAction;
+let actions = [], settings;
+let singleStepMode = false;
+let sizeOfNextStep = 0;
+let currentAction = null;
+
+/* ======================
+   自动方向控制变量
+====================== */
+const _prevPos = new THREE.Vector3();
+const _moveDir = new THREE.Vector3();
+const _targetQuat = new THREE.Quaternion();
+const _lookMatrix = new THREE.Matrix4();
+const _up = new THREE.Vector3(0, 1, 0);
+let hasPrevPos = false;
+
+init();
+
+function init() {
+
+    const container = document.getElementById('container');
+
+    camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 100);
+    camera.position.set(1, 2, -3);
+    camera.lookAt(0, 1, 0);
+
+    clock = new THREE.Clock();
+
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xa0a0a0);
+    scene.fog = new THREE.Fog(0xa0a0a0, 10, 50);
+
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x8d8d8d, 3);
+    hemiLight.position.set(0, 20, 0);
+    scene.add(hemiLight);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 3);
+    dirLight.position.set(-3, 10, -10);
+    dirLight.castShadow = true;
+    scene.add(dirLight);
+
+    const mesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(100, 100),
+        new THREE.MeshPhongMaterial({ color: 0xcbcbcb, depthWrite: false })
+    );
+    mesh.rotation.x = -Math.PI / 2;
+    mesh.receiveShadow = true;
+    scene.add(mesh);
+
+    const dracoLoader = new DRACOLoader();
+    dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.4.1/');
+
+    const loader = new GLTFLoader();
+    loader.setDRACOLoader(dracoLoader);
+    loader.load('./animation3.glb', function (gltf) {
+
+        model = gltf.scene;
+        model.scale.set(1, 1, 1);
+        scene.add(model);
+
+        model.traverse(obj => { if (obj.isMesh) obj.castShadow = true; });
+
+        skeleton = new THREE.SkeletonHelper(model);
+        skeleton.visible = false;
+        scene.add(skeleton);
+
+        mixer = new THREE.AnimationMixer(model);
+
+        const animations = gltf.animations;
+        walkAction = mixer.clipAction(animations[4]);
+        stopAction = mixer.clipAction(animations[0]);
+        trunRightAction = mixer.clipAction(animations[3]);
+        trunLeftAction = mixer.clipAction(animations[2]);
+        takeAction = mixer.clipAction(animations[1]);
+
+        [stopAction, trunLeftAction, trunRightAction, takeAction].forEach(a => {
+            if (a) {
+                a.clampWhenFinished = true;
+                a.setLoop(THREE.LoopOnce);
+            }
+        });
+
+        actions = [walkAction, takeAction, stopAction, trunLeftAction, trunRightAction];
+        activateWalkOnly();
+        createPanel();
+
+        renderer.setAnimationLoop(animate);
+    });
+
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    container.appendChild(renderer.domElement);
+
+    stats = new Stats();
+    container.appendChild(stats.dom);
+
+    window.addEventListener('resize', onWindowResize);
+}
+
+/* ======================
+   动画相关（原样保留）
+====================== */
+function setWeight(action, weight) {
+    if (!action) return;
+    action.enabled = true;
+    action.setEffectiveTimeScale(1);
+    action.setEffectiveWeight(weight);
+}
+
+function transitionTo(endAction, duration = 0.5) {
+    if (!endAction || currentAction === endAction) return;
+    endAction.reset().play();
+    if (currentAction) currentAction.crossFadeTo(endAction, duration, true);
+    currentAction = endAction;
+}
+
+function activateWalkOnly() {
+    if (walkAction) {
+        walkAction.play();
+        currentAction = walkAction;
+    }
+}
+
+/* ======================
+   GUI（未改）
+====================== */
+function createPanel() {
+    const panel = new GUI({ width: 310 });
+    settings = {};
+    panel.add({ walk: () => transitionTo(walkAction) }, 'walk');
+    panel.add({ left: () => transitionTo(trunLeftAction) }, 'left');
+    panel.add({ right: () => transitionTo(trunRightAction) }, 'right');
+    panel.add({ take: () => transitionTo(takeAction) }, 'take');
+    panel.add({ stop: () => transitionTo(stopAction) }, 'stop');
+}
+
+/* ======================
+   自动方向控制（核心）
+====================== */
+function updateAutoDirection(delta) {
+    if (!model) return;
+
+    if (!hasPrevPos) {
+        _prevPos.copy(model.position);
+        hasPrevPos = true;
+        return;
+    }
+
+    _moveDir.subVectors(model.position, _prevPos);
+
+    if (_moveDir.lengthSq() > 0.00001) {
+        _moveDir.normalize();
+        const target = _moveDir.clone().add(model.position);
+
+        _lookMatrix.lookAt(model.position, target, _up);
+        _targetQuat.setFromRotationMatrix(_lookMatrix);
+
+        // ⭐ 模型前向修正（非常关键）
+        _targetQuat.multiply(
+            new THREE.Quaternion().setFromEuler(
+                new THREE.Euler(0, Math.PI, 0)
+            )
+        );
+
+        model.quaternion.slerp(_targetQuat, delta * 6);
+    }
+
+    _prevPos.copy(model.position);
+}
+
+/* ======================
+   主循环
+====================== */
+function animate() {
+    let delta = clock.getDelta();
+    if (singleStepMode) {
+        delta = sizeOfNextStep;
+        sizeOfNextStep = 0;
+    }
+
+    if (mixer) mixer.update(delta);
+    updateAutoDirection(delta);
+
+    renderer.render(scene, camera);
+    stats.update();
+}
+
+function onWindowResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+}
+</script>
+</body>
+</html>
