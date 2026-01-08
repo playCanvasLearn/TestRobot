@@ -33,7 +33,7 @@
     </script>
 
     <script type="module">
-        
+
 
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -46,6 +46,7 @@
         import { buildLookAtMarkers, createTextSprite } from './js/lookAtMarkers.js';
         import { positionsAnimation } from './js/positionsAnimation.js';
         import { createPanel as createControlPanel } from './js/panel.js';
+        import { createRobotLabel,updateRobotLabel } from './js/robotLabel.js';
 
         const dracoLoader = new DRACOLoader();
         dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.4.1/');
@@ -138,7 +139,7 @@
             buildLookAtMarkers(positionsAnimation, lookAtGroup);
         }
 
-        
+
 
         function loadMap() {
             gltfLoader.load("./sketchMap.glb", (gltf) => {
@@ -278,7 +279,7 @@
             currentAction = endAction;
         }
 
-        
+
 
         function crossTo(action) {
             const duration = settings['use default duration'] ? settings['set custom duration'] : settings['set custom duration'];
