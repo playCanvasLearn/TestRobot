@@ -108,6 +108,7 @@
         let animationDirection = 0; // 0表示无动作，1表示开门，-1表示关门
 
         let robotLabel = null;
+        let currentLabelContent = '';
 
 
 
@@ -173,12 +174,98 @@
             });
             loadMap();
             loadRobot();
-            robotLabel = createRobotLabel(scene);
+            createRobotLabel(); // 创建机器人标签
             window.addEventListener("resize", onResize);
             buildLookAtMarkers(positionsAnimation, lookAtGroup);
         }
 
-        
+        // 创建机器人头顶标签的函数
+        function createRobotLabel() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 50;
+            canvas.height = 20;
+
+            // 创建canvas纹理
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.minFilter = THREE.LinearFilter;
+            texture.magFilter = THREE.LinearFilter;
+
+            // 创建材质
+            const material = new THREE.SpriteMaterial({
+                map: texture,
+                transparent: true,
+                depthTest: false // 确保标签始终可见
+            });
+
+            // 创建精灵对象
+            robotLabel = new THREE.Sprite(material);
+            robotLabel.scale.set(1, 0.5, 0.5); // 调整标签大小
+            robotLabel.visible = false; // 初始隐藏
+            scene.add(robotLabel);
+        }
+
+        // 更新标签内容的函数
+        function updateLabelContent(text) {
+            if (!robotLabel || currentLabelContent === text) return;
+            currentLabelContent = text;
+            if (text === '') {
+                robotLabel.visible = false;
+                return;
+            }
+            robotLabel.visible = true;
+            // 更新canvas内容
+            const canvas = robotLabel.material.map.image;
+            const context = canvas.getContext('2d');
+
+            // 清空画布
+            context.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 绘制背景
+            context.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            context.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 绘制文字
+            context.font = '12px Arial';
+            context.fillStyle = 'white';
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+
+            // 文字换行处理
+            const words = text.split('');
+            let line = '';
+            const lines = [];
+            const maxWidth = canvas.width;
+
+            for (let i = 0; i < words.length; i++) {
+                const testLine = line + words[i];
+                const metrics = context.measureText(testLine);
+                if (metrics.width > maxWidth && i > 0) {
+                    lines.push(line);
+                    line = words[i];
+                } else {
+                    line = testLine;
+                }
+            }
+            lines.push(line);
+
+            // 绘制多行文字
+            const lineHeight = 30;
+            const startY = (canvas.height - (lines.length - 1) * lineHeight) / 2;
+
+            for (let i = 0; i < lines.length; i++) {
+                context.fillText(lines[i], canvas.width / 2, startY + i * lineHeight);
+            }
+
+            // 更新纹理
+            robotLabel.material.map.needsUpdate = true;
+            if (scene) {
+                scene.traverse((child) => {
+                    if (child.isMesh && child.chartController) {
+                        child.chartController.setTitle(currentLabelContent);
+                    }
+                });
+            }
+        }
 
         function loadMap() {
             gltfLoader.load("./sketchMap.glb", (gltf) => {
@@ -482,7 +569,7 @@
             // 标签与门状态更新
             if (robotLabel) {
                 robotLabel.position.set(x, 4, z);
-                updateRobotLabel(robotLabel, positionsAnimation[currentSegment].showMessage, scene);
+                updateLabelContent(positionsAnimation[currentSegment].showMessage);
             }
             updateDoorState(positionsAnimation[currentSegment].showMessage);
         }
