@@ -85,6 +85,7 @@
         import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
         import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
         import { setupChartTexture } from './js/chartTexture.js';
+        import { buildLookAtMarkers, createTextSprite } from './js/lookAtMarkers.js';
 
         const dracoLoader = new DRACOLoader();
         dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.4.1/');
@@ -98,8 +99,6 @@
 
         let t = 0;
 
-        const speed = 0.1;
-
         // 修改全局变量初始化
         let leftDoor = null;
         let rightDoor = null;
@@ -107,9 +106,6 @@
         let isProcessing = false;
         let doorAnimationProgress = 0;
         let animationDirection = 0; // 0表示无动作，1表示开门，-1表示关门
-
-        let isPaused = false;
-        let pauseStartTime = null;
 
         let robotLabel = null;
         let currentLabelContent = '';
@@ -180,13 +176,12 @@
             loadRobot();
             createRobotLabel(); // 创建机器人标签
             window.addEventListener("resize", onResize);
-            buildLookAtMarkers();
+            buildLookAtMarkers(positionsAnimation, lookAtGroup);
         }
 
         // 创建机器人头顶标签的函数
         function createRobotLabel() {
             const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d');
             canvas.width = 50;
             canvas.height = 20;
 
@@ -514,40 +509,7 @@
             // 过渡时长：优先使用面板设置；没有面板时使用默认值 0.5s
             return settings && settings['use default duration'] ? settings['set custom duration'] : settings ? settings['set custom duration'] : 0.5;
         }
-        function createTextSprite(text) {
-            const canvas = document.createElement('canvas');
-            canvas.width = 128;
-            canvas.height = 64;
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = 'rgba(0,0,0,0.5)';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = 'white';
-            ctx.font = '20px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(text, canvas.width / 2, canvas.height / 2);
-            const texture = new THREE.CanvasTexture(canvas);
-            const material = new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false });
-            const sprite = new THREE.Sprite(material);
-            sprite.scale.set(2, 1, 1);
-            return sprite;
-        }
-        function buildLookAtMarkers() {
-            lookAtGroup.clear();
-            for (let i = 0; i < positionsAnimation.length; i++) {
-                const seg = positionsAnimation[i];
-                if (!seg.lookAt) continue;
-                const g = new THREE.SphereGeometry(0.12, 16, 16);
-                const m = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-                const s = new THREE.Mesh(g, m);
-                s.position.set(seg.lookAt.x, 0.1, seg.lookAt.z);
-                const label = createTextSprite(`${seg.lookAt.x.toFixed(2)}, ${seg.lookAt.z.toFixed(2)}`);
-                label.position.set(seg.lookAt.x, 0.6, seg.lookAt.z);
-                lookAtGroup.add(s);
-                lookAtGroup.add(label);
-            }
-        }
+
 
         function moveSquare(delta) {
             // 每段固定 5 秒：按 delta 推进时间；冻结期间不推进（保持原地播放一次性动作）
