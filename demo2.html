@@ -129,9 +129,6 @@
         let sizeOfNextStep = 0;
         let axesHelper = null;
         let lookAtGroup = null;
-        let lookAtMarkers = [];
-        let lookAtLine = null;
-        let prevLookAtIndex = -1;
         // 上一次路径段索引（用于“段触发”，避免每帧重复切换动作）
         let prevSegmentIndex = -1;
         // 冻结位移（播放一次性动作期间暂停移动插值，动作完成后恢复）
@@ -346,7 +343,6 @@
                 // 添加拿取动画
                 takeAction = mixer.clipAction(gltf.animations[1]);
 
-
                 // 为所有动画设置一次性播放并停留最后一帧
                 [stopAction, trunLeftAction, trunRightAction, takeAction].forEach(action => {
                     if (action) {
@@ -354,25 +350,6 @@
                         action.setLoop(THREE.LoopOnce);   // 只播放一次
                     }
                 });
-                /*
-                                if (walkAction) {
-                                    walkAction.setDuration(5);  // 5秒内完成
-                                }
-
-                                if (takeAction) {
-                                    takeAction.setDuration(5);  // 5秒内完成
-                                }
-
-                                if (stopAction) {
-                                    stopAction.setDuration(5);  // 5秒内完成
-                                }
-
-                                if (trunLeftAction) {
-                                    trunLeftAction.setDuration(5);  // 5秒内完成
-                                }
-                                if (trunRightAction) {
-                                    trunRightAction.setDuration(5); // 5秒内完成
-                                }*/
 
                 // 初始化当前动作为行走动画
                 currentAction = walkAction;
@@ -381,13 +358,13 @@
                 createPanel();
                 if (mixer) {
                     // 监听一次性动作完成：解除冻结并淡入回“行走”，保持流程连贯
-                    mixer.addEventListener('finished', (event) => {
+/*                    mixer.addEventListener('finished', (event) => {
                         if (waitAction && event.action === waitAction) {
                             holdMovement = false;
                             waitAction = null;
                             transitionTo(walkAction, getCrossFadeDuration());
                         }
-                    });
+                    });*/
                 }
             });
         }
@@ -454,7 +431,7 @@
             folder1.add(settings, 'show robot').onChange(v => { if (robot) robot.visible = v; });
             folder1.add(settings, 'show map').onChange(v => { if (map) map.visible = v; });
             folder1.add(settings, 'show axes').onChange(v => { if (axesHelper) axesHelper.visible = v; });
-            folder1.add(settings, 'show lookAt').onChange(v => { if (lookAtGroup) lookAtGroup.visible = v; if (lookAtLine) lookAtLine.visible = v; });
+            folder1.add(settings, 'show lookAt').onChange(v => { if (lookAtGroup) lookAtGroup.visible = v; });
             folder1.add(settings, 'loop animation');
 
             folder3.add(settings, 'pause/continue');
@@ -565,7 +542,6 @@
             return sprite;
         }
         function buildLookAtMarkers() {
-            lookAtMarkers = [];
             lookAtGroup.clear();
             for (let i = 0; i < positionsAnimation.length; i++) {
                 const seg = positionsAnimation[i];
@@ -578,26 +554,12 @@
                 label.position.set(seg.lookAt.x, 0.6, seg.lookAt.z);
                 lookAtGroup.add(s);
                 lookAtGroup.add(label);
-                lookAtMarkers.push(s);
             }
         }
 
         function moveSquare(delta) {
             // 每段固定 5 秒：按 delta 推进时间；冻结期间不推进（保持原地播放一次性动作）
             const segmentTime = 5;
-            const totalDuration = positionsAnimation.length * segmentTime;
-
-            // 非循环模式下的结束检查
-            if (!settings['loop animation'] && t >= totalDuration) {
-                if (currentAction !== stopAction) {
-                    transitionTo(stopAction, getCrossFadeDuration());
-                }
-                // 确保停留在最后位置
-                const lastPos = positionsAnimation[positionsAnimation.length - 1].position;
-                robot.position.set(lastPos.x, 0, lastPos.z);
-                return;
-            }
-
             if (!holdMovement) {
                 t += delta;
             }
@@ -643,43 +605,12 @@
                     waitAction = null;
                     transitionTo(walkAction, crossFadeDuration);
                 }
-
-                const lookAtCfg = positionsAnimation[currentSegment].lookAt;
-                if (lookAtCfg) {
-                    const dx2 = lookAtCfg.x - x;
-                    const dz2 = lookAtCfg.z - z;
-                    const yaw2 = Math.atan2(dx2, dz2);
-                    const targetQuat2 = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, yaw2, 0));
-                    robot.quaternion.slerp(targetQuat2, Math.min(1, 6 * delta));
-                    if (settings && settings['show lookAt']) {
-                        const p1 = new THREE.Vector3(x, 0, z);
-                        const p2 = new THREE.Vector3(lookAtCfg.x, 0, lookAtCfg.z);
-                        if (!lookAtLine) {
-                            const geometry = new THREE.BufferGeometry().setFromPoints([p1, p2]);
-                            const material = new THREE.LineBasicMaterial({ color: 0x00ffff });
-                            lookAtLine = new THREE.Line(geometry, material);
-                            scene.add(lookAtLine);
-                        } else {
-                            lookAtLine.geometry.setFromPoints([p1, p2]);
-                        }
-                        lookAtLine.visible = true;
-                        if (prevLookAtIndex !== currentSegment) {
-                            if (prevLookAtIndex >= 0 && lookAtMarkers[prevLookAtIndex]) {
-                                lookAtMarkers[prevLookAtIndex].material.color.setHex(0xff0000);
-                                lookAtMarkers[prevLookAtIndex].scale.set(1, 1, 1);
-                            }
-                            if (lookAtMarkers[currentSegment]) {
-                                lookAtMarkers[currentSegment].material.color.setHex(0xffff00);
-                                lookAtMarkers[currentSegment].scale.set(1.4, 1.4, 1.4);
-                            }
-                            prevLookAtIndex = currentSegment;
-                        }
-                    } else {
-                        if (lookAtLine) lookAtLine.visible = false;
-                    }
-                }
             }
 
+            const lookAtCfg = positionsAnimation[currentSegment].lookAt;
+            if (lookAtCfg) {
+                //robot.lookAt(lookAtCfg.x, 0, lookAtCfg.z);
+            }
             // 标签与门状态更新
             if (robotLabel) {
                 robotLabel.position.set(x, 4, z);
