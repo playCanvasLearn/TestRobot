@@ -33,8 +33,6 @@
     </script>
 
     <script type="module">
-
-
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -70,14 +68,10 @@
 
         let robotLabel = null;
 
-
-
         let stopAction = null;
         let takeAction = null;
-
         let trunLeftAction = null;
         let trunRightAction = null;
-
         let currentAction = null;
         let actions = [];
         let settings;
@@ -138,8 +132,6 @@
             window.addEventListener("resize", onResize);
             buildLookAtMarkers(positionsAnimation, lookAtGroup);
         }
-
-
 
         function loadMap() {
             gltfLoader.load("./sketchMap.glb", (gltf) => {
@@ -223,9 +215,6 @@
                     axesHelper,
                     lookAtGroup,
                     actions,
-                    pauseContinue,
-                    toSingleStepMode,
-                    modifyTimeScale,
                     crossTo,
                     setWeight,
                     walkAction,
@@ -279,39 +268,9 @@
             currentAction = endAction;
         }
 
-
-
         function crossTo(action) {
             const duration = settings['use default duration'] ? settings['set custom duration'] : settings['set custom duration'];
             transitionTo(action, duration);
-        }
-
-        function modifyTimeScale(speed) {
-            if (mixer) mixer.timeScale = speed;
-        }
-
-        function pauseContinue() {
-            if (singleStepMode) {
-                singleStepMode = false;
-                unPauseAllActions();
-            } else {
-                if (!actions.length) return;
-                actions[0] && actions[0].paused ? unPauseAllActions() : pauseAllActions();
-            }
-        }
-
-        function pauseAllActions() {
-            actions.forEach(a => { if (a) a.paused = true; });
-        }
-
-        function unPauseAllActions() {
-            actions.forEach(a => { if (a) a.paused = false; });
-        }
-
-        function toSingleStepMode() {
-            unPauseAllActions();
-            singleStepMode = true;
-            sizeOfNextStep = settings['modify step size'];
         }
 
         function onResize() {
@@ -342,7 +301,6 @@
             // 过渡时长：优先使用面板设置；没有面板时使用默认值 0.5s
             return settings && settings['use default duration'] ? settings['set custom duration'] : settings ? settings['set custom duration'] : 0.5;
         }
-
 
         function moveSquare(delta) {
             // 每段固定 5 秒：按 delta 推进时间；冻结期间不推进（保持原地播放一次性动作）

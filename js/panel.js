@@ -5,9 +5,6 @@ export function createPanel({
     axesHelper,
     lookAtGroup,
     actions,
-    pauseContinue,
-    toSingleStepMode,
-    modifyTimeScale,
     crossTo,
     setWeight,
     walkAction,
@@ -28,8 +25,6 @@ export function createPanel({
         'show axes': true,
         'show lookAt': true,
         'loop animation': false,
-        'pause/continue': pauseContinue,
-        'make single step': toSingleStepMode,
         'modify step size': 0.05,
         'use default duration': 0.5,
         'set custom duration': 0.5,
@@ -45,8 +40,6 @@ export function createPanel({
     folder1.add(settings, 'show axes').onChange(v => { if (axesHelper) axesHelper.visible = v; });
     folder1.add(settings, 'show lookAt').onChange(v => { if (lookAtGroup) lookAtGroup.visible = v; });
     folder1.add(settings, 'loop animation');
-    folder3.add(settings, 'pause/continue');
-    folder3.add(settings, 'make single step');
     folder3.add(settings, 'modify step size', 0.01, 0.1, 0.001);
     folder4.add(settings, 'use default duration');
     folder4.add(settings, 'set custom duration', 0, 10, 0.01);
@@ -60,7 +53,6 @@ export function createPanel({
     folder5.add(settings, 'turn left weight', 0, 1, 0.01).listen().onChange(w => setWeight(trunLeftAction, w));
     folder5.add(settings, 'turn right weight', 0, 1, 0.01).listen().onChange(w => setWeight(trunRightAction, w));
     folder5.add(settings, 'stop weight', 0, 1, 0.01).listen().onChange(w => setWeight(stopAction, w));
-    folder6.add(settings, 'modify time scale', 0, 1.5, 0.01).onChange(modifyTimeScale);
     folder1.open();
     folder3.open();
     folder4.open();
