@@ -136,14 +136,6 @@
         // 当前等待完成的一次性动作（转身/拿取/停等）
         let waitAction = null;
 
-        let animationFrameCounts = {
-            stop: 0,
-            trunLeft: 0,
-            trunRight: 0,
-            walk: 0
-        };
-
-
         function init() {
             scene = new THREE.Scene();
             // scene.background = new THREE.Color(0x222222);
@@ -584,6 +576,7 @@
             robot.position.set(x, 0, z);
             // 段触发：仅在段索引变化时切换动作，避免每帧抖动
             if (prevSegmentIndex !== currentSegment) {
+                console.log(currentSegment)
                 prevSegmentIndex = currentSegment;
                 const crossFadeDuration = getCrossFadeDuration();
                 const turn = positionsAnimation[currentSegment].turn;
