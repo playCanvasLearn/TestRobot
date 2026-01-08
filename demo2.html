@@ -233,7 +233,7 @@
                         if (waitAction && event.action === waitAction) {
                             holdMovement = false;
                             waitAction = null;
-                            //transitionTo(walkAction, getCrossFadeDuration());
+                            transitionTo(walkAction, getCrossFadeDuration());
                         }
                     });
                 }
@@ -331,6 +331,17 @@
             const x = currentPos.x + (nextPos.x - currentPos.x) * interpolation;
             const z = currentPos.z + (nextPos.z - currentPos.z) * interpolation;
             robot.position.set(x, 0, z);
+
+            const lookAtCfgBefore = positionsAnimation[currentSegment].lookAt;
+            if (lookAtCfgBefore && robot) {
+                const dx0 = lookAtCfgBefore.x - robot.position.x;
+                const dz0 = lookAtCfgBefore.z - robot.position.z;
+                if (dx0 * dx0 + dz0 * dz0 > 0.0001) {
+                    const yaw0 = Math.atan2(dx0, dz0);
+                    const targetQuat0 = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, yaw0, 0));
+                    robot.quaternion.copy(targetQuat0);
+                }
+            }
             // 段触发：仅在段索引变化时切换动作，避免每帧抖动
             if (prevSegmentIndex !== currentSegment) {
                 console.log(currentSegment)
@@ -357,10 +368,6 @@
                 }
             }
 
-            const lookAtCfg = positionsAnimation[currentSegment].lookAt;
-            if (lookAtCfg) {
-                robot.lookAt(lookAtCfg.x, 0, lookAtCfg.z);
-            }
             // 标签与门状态更新
             if (robotLabel) {
                 robotLabel.position.set(x, 4, z);

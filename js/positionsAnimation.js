@@ -1,9 +1,9 @@
 export const positionsAnimation = [
     { showMessage: '去拿料', turn: '', position: { x: 1.8, y: 0, z: 2.5 }, lookAt: { x: 1.8, y: 0, z: 6 } },
     { showMessage: '去拿料', turn: 'trunRight', position: { x: 1.8, y: 0, z: 4.5 }, lookAt: { x: -3.8, y: 0, z: 6 } },
-    { showMessage: '拿料中', turn: 'pause', position: { x: 1.8, y: 0, z: 4.5 }, lookAt: { x: -3.8, y: 0, z: 6 } },
+    /*{ showMessage: '拿料中', turn: 'pause', position: { x: 1.8, y: 0, z: 4.5 }, lookAt: { x: -3.8, y: 0, z: 6 } },
     { showMessage: '去加工', turn: 'trunRight', position: { x: 1.8, y: 0, z: 4.5 }, lookAt: { x: 1.8, y: 0, z: -6 } },
-    /*{ showMessage: '去加工', turn: '', position: { x: 1.7, y: 0, z: 4.5 }, lookAt: { x: 1.7, y: 0, z: 2.5 } },
+    { showMessage: '去加工', turn: '', position: { x: 1.7, y: 0, z: 4.5 }, lookAt: { x: 1.7, y: 0, z: 2.5 } },
     { showMessage: '去加工', turn: '', position: { x: 1.7, y: 0, z: 2.5 }, lookAt: { x: 1.7, y: 0, z: 0.5 } },
     { showMessage: '去加工', turn: '', position: { x: 1.7, y: 0, z: 0.5 }, lookAt: { x: 1.7, y: 0, z: -1.1 } },
     { showMessage: '去加工', turn: 'trunLeft', position: { x: 1.7, y: 0, z: -1.1 }, lookAt: { x: 1.7, y: 0, z: -1.1 } },
