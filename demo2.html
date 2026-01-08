@@ -34,11 +34,11 @@
 
     <script type="module">
         const positionsAnimation = [
-            { showMessage: '去拿料', turn: '', position: { x: 1.8, y: 0, z: 2.5 }, lookAt: { x: 1.8, y: 0, z: 4.5 } },
-            { showMessage: '去拿料', turn: 'trunRight', position: { x: 1.8, y: 0, z: 4.5 }, lookAt: { x: 1.8, y: 0, z: 4.5 } },
-            { showMessage: '拿料中', turn: 'pause', position: { x: 1.8, y: 0, z: 4.5 }, lookAt: { x: 1.79, y: 0, z: 4.5 } },
-            { showMessage: '去加工', turn: 'trunRight', position: { x: 1.79, y: 0, z: 4.5 }, lookAt: { x: 1.7, y: 0, z: 4.5 } },
-            { showMessage: '去加工', turn: '', position: { x: 1.7, y: 0, z: 4.5 }, lookAt: { x: 1.7, y: 0, z: 2.5 } },
+            { showMessage: '去拿料', turn: '', position: { x: 1.8, y: 0, z: 2.5 }, lookAt: { x: 1.8, y: 0, z: 5.5 } },
+            { showMessage: '去拿料', turn: 'trunRight', position: { x: 1.8, y: 0, z: 4.5 }, lookAt: { x: -3.8, y: 0, z: 5.5 } },
+            { showMessage: '拿料中', turn: 'pause', position: { x: 1.8, y: 0, z: 4.5 }, lookAt: { x: -3.8, y: 0, z: 5.5 } },
+            { showMessage: '去加工', turn: 'trunRight', position: { x: 1.79, y: 0, z: 4.5 }, lookAt: { x: -3.8, y: 0, z: 5.5 } },
+            /*{ showMessage: '去加工', turn: '', position: { x: 1.7, y: 0, z: 4.5 }, lookAt: { x: 1.7, y: 0, z: 2.5 } },
             { showMessage: '去加工', turn: '', position: { x: 1.7, y: 0, z: 2.5 }, lookAt: { x: 1.7, y: 0, z: 0.5 } },
             { showMessage: '去加工', turn: '', position: { x: 1.7, y: 0, z: 0.5 }, lookAt: { x: 1.7, y: 0, z: -1.1 } },
             { showMessage: '去加工', turn: 'trunLeft', position: { x: 1.7, y: 0, z: -1.1 }, lookAt: { x: 1.7, y: 0, z: -1.1 } },
@@ -74,7 +74,7 @@
             { showMessage: '放料中', turn: 'pause', position: { x: -1.2, y: 0, z: 4.5 }, lookAt: { x: -1.3, y: 0, z: 4.5 } },
             { showMessage: '去拿料', turn: '', position: { x: -1.3, y: 0, z: 4.5 }, lookAt: { x: -1.3, y: 0, z: 2.7 } },
             { showMessage: '去拿料', turn: '', position: { x: -1.3, y: 0, z: 2.7 }, lookAt: { x: 1.8, y: 0, z: 2.5 } },
-            { showMessage: '去拿料', turn: '', position: { x: 1.8, y: 0, z: 2.5 }, lookAt: { x: 1.8, y: 0, z: 4.5 } }
+            { showMessage: '去拿料', turn: '', position: { x: 1.8, y: 0, z: 2.5 }, lookAt: { x: 1.8, y: 0, z: 4.5 } }*/
         ];
 
         import * as THREE from 'three';
@@ -437,6 +437,7 @@
                 'show map': true,
                 'show axes': true,
                 'show lookAt': true,
+                'loop animation': false,
                 'pause/continue': pauseContinue,
                 'make single step': toSingleStepMode,
                 'modify step size': 0.05,
@@ -454,6 +455,7 @@
             folder1.add(settings, 'show map').onChange(v => { if (map) map.visible = v; });
             folder1.add(settings, 'show axes').onChange(v => { if (axesHelper) axesHelper.visible = v; });
             folder1.add(settings, 'show lookAt').onChange(v => { if (lookAtGroup) lookAtGroup.visible = v; if (lookAtLine) lookAtLine.visible = v; });
+            folder1.add(settings, 'loop animation');
 
             folder3.add(settings, 'pause/continue');
             folder3.add(settings, 'make single step');
@@ -583,14 +585,34 @@
         function moveSquare(delta) {
             // 每段固定 5 秒：按 delta 推进时间；冻结期间不推进（保持原地播放一次性动作）
             const segmentTime = 5;
+            const totalDuration = positionsAnimation.length * segmentTime;
+
+            // 非循环模式下的结束检查
+            if (!settings['loop animation'] && t >= totalDuration) {
+                if (currentAction !== stopAction) {
+                    transitionTo(stopAction, getCrossFadeDuration());
+                }
+                // 确保停留在最后位置
+                const lastPos = positionsAnimation[positionsAnimation.length - 1].position;
+                robot.position.set(lastPos.x, 0, lastPos.z);
+                return;
+            }
+
             if (!holdMovement) {
                 t += delta;
             }
+
             // 当前段索引与插值
             const progress = t / segmentTime;
             const currentIndex = Math.floor(progress);
             const currentSegment = currentIndex % positionsAnimation.length;
-            const nextIndex = (currentSegment + 1) % positionsAnimation.length;
+
+            // 确定下一段索引：如果不循环且已是最后一段，则不再回到起点（保持在原地）
+            let nextIndex = (currentSegment + 1) % positionsAnimation.length;
+            if (!settings['loop animation'] && currentSegment === positionsAnimation.length - 1) {
+                nextIndex = currentSegment;
+            }
+
             const interpolation = progress - currentIndex;
             const currentPos = positionsAnimation[currentSegment].position;
             const nextPos = positionsAnimation[nextIndex].position;
@@ -621,41 +643,43 @@
                     waitAction = null;
                     transitionTo(walkAction, crossFadeDuration);
                 }
-            }
-            const lookAtCfg = positionsAnimation[currentSegment].lookAt;
-            if (lookAtCfg) {
-                const dx2 = lookAtCfg.x - x;
-                const dz2 = lookAtCfg.z - z;
-                const yaw2 = Math.atan2(dx2, dz2);
-            const targetQuat2 = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, yaw2, 0));
-            robot.quaternion.slerp(targetQuat2, Math.min(1, 6 * delta));
-            if (settings && settings['show lookAt']) {
-                const p1 = new THREE.Vector3(x, 0, z);
-                const p2 = new THREE.Vector3(lookAtCfg.x, 0, lookAtCfg.z);
-                if (!lookAtLine) {
-                    const geometry = new THREE.BufferGeometry().setFromPoints([p1, p2]);
-                    const material = new THREE.LineBasicMaterial({ color: 0x00ffff });
-                    lookAtLine = new THREE.Line(geometry, material);
-                    scene.add(lookAtLine);
-                } else {
-                    lookAtLine.geometry.setFromPoints([p1, p2]);
-                }
-                lookAtLine.visible = true;
-                if (prevLookAtIndex !== currentSegment) {
-                    if (prevLookAtIndex >= 0 && lookAtMarkers[prevLookAtIndex]) {
-                        lookAtMarkers[prevLookAtIndex].material.color.setHex(0xff0000);
-                        lookAtMarkers[prevLookAtIndex].scale.set(1, 1, 1);
+
+                const lookAtCfg = positionsAnimation[currentSegment].lookAt;
+                if (lookAtCfg) {
+                    const dx2 = lookAtCfg.x - x;
+                    const dz2 = lookAtCfg.z - z;
+                    const yaw2 = Math.atan2(dx2, dz2);
+                    const targetQuat2 = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, yaw2, 0));
+                    robot.quaternion.slerp(targetQuat2, Math.min(1, 6 * delta));
+                    if (settings && settings['show lookAt']) {
+                        const p1 = new THREE.Vector3(x, 0, z);
+                        const p2 = new THREE.Vector3(lookAtCfg.x, 0, lookAtCfg.z);
+                        if (!lookAtLine) {
+                            const geometry = new THREE.BufferGeometry().setFromPoints([p1, p2]);
+                            const material = new THREE.LineBasicMaterial({ color: 0x00ffff });
+                            lookAtLine = new THREE.Line(geometry, material);
+                            scene.add(lookAtLine);
+                        } else {
+                            lookAtLine.geometry.setFromPoints([p1, p2]);
+                        }
+                        lookAtLine.visible = true;
+                        if (prevLookAtIndex !== currentSegment) {
+                            if (prevLookAtIndex >= 0 && lookAtMarkers[prevLookAtIndex]) {
+                                lookAtMarkers[prevLookAtIndex].material.color.setHex(0xff0000);
+                                lookAtMarkers[prevLookAtIndex].scale.set(1, 1, 1);
+                            }
+                            if (lookAtMarkers[currentSegment]) {
+                                lookAtMarkers[currentSegment].material.color.setHex(0xffff00);
+                                lookAtMarkers[currentSegment].scale.set(1.4, 1.4, 1.4);
+                            }
+                            prevLookAtIndex = currentSegment;
+                        }
+                    } else {
+                        if (lookAtLine) lookAtLine.visible = false;
                     }
-                    if (lookAtMarkers[currentSegment]) {
-                        lookAtMarkers[currentSegment].material.color.setHex(0xffff00);
-                        lookAtMarkers[currentSegment].scale.set(1.4, 1.4, 1.4);
-                    }
-                    prevLookAtIndex = currentSegment;
                 }
-            } else {
-                if (lookAtLine) lookAtLine.visible = false;
             }
-            }
+
             // 标签与门状态更新
             if (robotLabel) {
                 robotLabel.position.set(x, 4, z);
