@@ -233,7 +233,7 @@
                         if (waitAction && event.action === waitAction) {
                             holdMovement = false;
                             waitAction = null;
-                            transitionTo(walkAction, getCrossFadeDuration());
+                            transitionTo(stopAction, getCrossFadeDuration());
                         }
                     });
                 }
@@ -344,7 +344,7 @@
             }
             // 段触发：仅在段索引变化时切换动作，避免每帧抖动
             if (prevSegmentIndex !== currentSegment) {
-                console.log(currentSegment)
+                //console.log(currentSegment)
                 prevSegmentIndex = currentSegment;
                 const crossFadeDuration = getCrossFadeDuration();
                 const turn = positionsAnimation[currentSegment].turn;

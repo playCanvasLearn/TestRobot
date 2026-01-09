@@ -32,7 +32,7 @@ export function createPanel({
         'take weight': 0.6,
         'turn left weight': 0.8,
         'turn right weight': 0.8,
-        'stop weight': 0.4
+        'stop weight': 1
     };
     folder1.add(settings, 'show robot').onChange(v => { if (robot) robot.visible = v; });
     folder1.add(settings, 'show skeleton').onChange(v => { if (skeleton) skeleton.visible = v; });
