@@ -308,7 +308,7 @@
 
         function moveSquare(delta) {
             // 每段固定 5 秒：按 delta 推进时间；冻结期间不推进（保持原地播放一次性动作）
-            const segmentTime = 5;
+            const segmentTime = 3;
             if (!holdMovement) {
                 t += delta;
             }
