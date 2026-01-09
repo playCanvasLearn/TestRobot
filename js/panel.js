@@ -11,7 +11,8 @@ export function createPanel({
     takeAction,
     trunLeftAction,
     trunRightAction,
-    stopAction
+    stopAction,
+    defaultClosed = false
 }) {
     const panel = new GUI({ width: 310 });
     const folder1 = panel.addFolder('Visibility');
@@ -56,5 +57,6 @@ export function createPanel({
     folder3.open();
     folder4.open();
     folder5.open();
+    if (defaultClosed) panel.close();
     return settings;
 }
