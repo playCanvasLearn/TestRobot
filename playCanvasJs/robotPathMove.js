@@ -111,7 +111,7 @@ RobotPathMove.prototype.initialize = function () {
      */
     this._targetMarker = new pc.Entity('TargetMarker');
     this._targetMarker.addComponent('model', { type: 'box' });
-    this._targetMarker.setLocalScale(0.1, 0.1, 0.1);
+    this._targetMarker.setLocalScale(0.3, 0.3, 0.3);
 
     var sceneRoot = this.app.root.findByName('SceneRoot');
     (sceneRoot || this.app.root).addChild(this._targetMarker);
@@ -126,7 +126,9 @@ RobotPathMove.prototype.update = function (dt) {
     if (!this.entity.rigidbody) return;
 
     // 路径走完直接结束
-    if (this._index >= this.path.length) return;
+    if (this._index >= this.path.length) {
+        _index = 0;
+    };
 
     var node = this.path[this._index];
     var pos = this.entity.getPosition();
