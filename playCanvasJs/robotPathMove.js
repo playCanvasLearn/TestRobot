@@ -2,9 +2,9 @@ var RobotPathMove = pc.createScript('robotPathMove');
 
 // ===== 可调参数 =====
 RobotPathMove.attributes.add('animEntity', { type: 'entity' });
-RobotPathMove.attributes.add('power', { type: 'number', default: 400000 });
+RobotPathMove.attributes.add('power', { type: 'number', default: 180000 });
 RobotPathMove.attributes.add('arriveDistance', { type: 'number', default: 0.15 });
-RobotPathMove.attributes.add('maxSpeed', { type: 'number', default: 3 });
+RobotPathMove.attributes.add('maxSpeed', { type: 'number', default: 1.2 });
 RobotPathMove.attributes.add('pauseTime', { type: 'number', default: 2 });
 
 // ===== initialize =====
@@ -68,6 +68,16 @@ RobotPathMove.prototype.initialize = function () {
     this._angle = initEuler.y;
 
     this.app.mouse.on(pc.EVENT_MOUSEDOWN, this.onMouseDown, this);
+
+    this._targetMarker = new pc.Entity('TargetMarker');
+    this._targetMarker.addComponent('model', { type: 'box' });
+    this._targetMarker.setLocalScale(0.1, 0.1, 0.1);
+    var sceneRoot = this.app.root.findByName('SceneRoot');
+    if (sceneRoot) {
+        sceneRoot.addChild(this._targetMarker);
+    } else {
+        this.app.root.addChild(this._targetMarker);
+    }
 };
 
 // ===== update =====
@@ -98,10 +108,19 @@ RobotPathMove.prototype.update = function (dt) {
         targetPos.z - pos.z
     );
 
+    if (this._targetMarker) {
+        this._targetMarker.setPosition(targetPos.x, targetPos.y, targetPos.z);
+    }
+
     var dist = this._moveDir.length();
 
     // 到达当前点
     if (dist < this.arriveDistance) {
+        if (this.entity.rigidbody) {
+            this.entity.rigidbody.linearVelocity.set(0, 0, 0);
+            this.entity.rigidbody.angularVelocity.set(0, 0, 0);
+        }
+        this.entity.setPosition(targetPos.x, targetPos.y, targetPos.z);
         this._index++;
         return;
     }
