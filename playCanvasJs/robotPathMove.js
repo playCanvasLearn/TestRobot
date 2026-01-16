@@ -59,9 +59,13 @@ RobotPathMove.prototype.initialize = function () {
     this._moveDir = new pc.Vec3();
     this._lookDir = new pc.Vec3();
     this._targetAngle = 0;
-    this._angle = this.animEntity
-        ? this.animEntity.getEulerAngles().y
-        : this.entity.getEulerAngles().y;
+
+    var initEuler = this.animEntity
+        ? this.animEntity.getEulerAngles().clone()
+        : this.entity.getEulerAngles().clone();
+
+    this._baseEuler = initEuler;
+    this._angle = initEuler.y;
 
     this.app.mouse.on(pc.EVENT_MOUSEDOWN, this.onMouseDown, this);
 };
@@ -120,15 +124,17 @@ RobotPathMove.prototype.updateMoveRotation = function (dt) {
     var dir = this._moveDir;
     if (dir.lengthSq() === 0) return;
 
-    this._targetAngle =
-        90 - Math.atan2(dir.z, dir.x) * pc.math.RAD_TO_DEG;
+    this._targetAngle = Math.atan2(dir.x, dir.z) * pc.math.RAD_TO_DEG + 180;
 
     this._angle = pc.math.lerpAngle(this._angle, this._targetAngle, 0.15);
 
+    var baseX = this._baseEuler ? this._baseEuler.x : 0;
+    var baseZ = this._baseEuler ? this._baseEuler.z : 0;
+
     if (this.animEntity) {
-        this.animEntity.setEulerAngles(0, this._angle, 0);
+        this.animEntity.setEulerAngles(baseX, this._angle, baseZ);
     } else {
-        this.entity.setEulerAngles(0, this._angle, 0);
+        this.entity.setEulerAngles(baseX, this._angle, baseZ);
     }
 };
 
@@ -147,15 +153,17 @@ RobotPathMove.prototype.updateLookAt = function (node, dt) {
 
     this._lookDir.normalize();
 
-    this._targetAngle =
-        90 - Math.atan2(this._lookDir.z, this._lookDir.x) * pc.math.RAD_TO_DEG;
+    this._targetAngle = Math.atan2(this._lookDir.x, this._lookDir.z) * pc.math.RAD_TO_DEG + 180;
 
     this._angle = pc.math.lerpAngle(this._angle, this._targetAngle, 0.15);
 
+    var baseX = this._baseEuler ? this._baseEuler.x : 0;
+    var baseZ = this._baseEuler ? this._baseEuler.z : 0;
+
     if (this.animEntity) {
-        this.animEntity.setEulerAngles(0, this._angle, 0);
+        this.animEntity.setEulerAngles(baseX, this._angle, baseZ);
     } else {
-        this.entity.setEulerAngles(0, this._angle, 0);
+        this.entity.setEulerAngles(baseX, this._angle, baseZ);
     }
 };
 
