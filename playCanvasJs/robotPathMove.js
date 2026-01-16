@@ -168,16 +168,20 @@ RobotPathMove.prototype.updateLookAt = function (node, dt) {
 };
 
 RobotPathMove.prototype.onMouseDown = function(event) {
-    // 获取屏幕坐标，转换到世界坐标（y=0平面）
-    var camera = this.app.root.findByName('Camera').camera; // 替换为你的相机名字
-    var mouseX = this.app.mouse.x / this.app.graphicsDevice.width;
-    var mouseY = this.app.mouse.y / this.app.graphicsDevice.height;
+    var cameraEntity = this.app.root.findByName('Camera');
+    if (!cameraEntity || !cameraEntity.camera) return;
+    var camera = cameraEntity.camera;
 
-    var ray = camera.screenPointToRay(mouseX, mouseY);
+    var mouseX = event.x;
+    var mouseY = event.y;
 
-    // 计算与 y=0 平面的交点
-    var t = -ray.origin.y / ray.direction.y;
-    var point = ray.origin.clone().add(ray.direction.clone().scale(t));
+    var from = camera.screenToWorld(mouseX, mouseY, camera.nearClip);
+    var to = camera.screenToWorld(mouseX, mouseY, camera.farClip);
+
+    var dir = to.clone().sub(from).normalize();
+
+    var t = -from.y / dir.y;
+    var point = from.clone().add(dir.clone().scale(t));
 
     console.log('点击坐标:', point);
 };
