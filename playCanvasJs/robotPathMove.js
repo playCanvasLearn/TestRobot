@@ -44,7 +44,7 @@ RobotPathMove.prototype.initialize = function () {
         { showMessage: '去加工', turn: '', position: { x: 1.7, y: 0, z: 0.5 }, lookAt: { x: 1.7, y: 0, z: -1.3 } },
         { showMessage: '去加工', turn: '', position: { x: 1.7, y: 0, z: -1.1 }, lookAt: { x: 1.7, y: 0, z: -1.3 } },
         { showMessage: '去加工', turn: '', position: { x: 1.7, y: 0, z: -1.1 }, lookAt: { x: 0.4, y: 0, z: -1.3 } },
-          { showMessage: '加工中', turn: 'pause', position: { x: 0.4, y: 0, z: -0.9 }, lookAt: { x: 0.4, y: 0, z: -0.9 } },
+          { showMessage: '加工中', turn: 'pause', position: { x: 0.4, y: 0, z: -0.9 }, lookAt: { x: 0.4, y: 0, z: -1.3 } },
           { showMessage: '去检测', turn: '', position: { x: 0.4, y: 0, z: -0.9 }, lookAt: { x: 0.4, y: 0, z: -1.9 } },
           { showMessage: '去检测', turn: '', position: { x: 0.4, y: 0, z: -1.2 }, lookAt: { x: 0.4, y: 0, z: -2.9 } },
           { showMessage: '去检测', turn: '', position: { x: 0.4, y: 0, z: -2.9 }, lookAt: { x: 0.4, y: 0, z: -3.9 } },
@@ -118,6 +118,21 @@ RobotPathMove.prototype.initialize = function () {
     var sceneRoot = this.app.root.findByName('SceneRoot');
     (sceneRoot || this.app.root).addChild(this._targetMarker);
 
+    this._targetLookMarker = new pc.Entity('TargetLookMarker');
+    this._targetLookMarker.addComponent('model', { type: 'sphere' });
+    this._targetLookMarker.setLocalScale(0.3, 0.3, 0.3);
+
+    // 创建红色材质
+    var redMat = new pc.StandardMaterial();
+    redMat.diffuse.set(1, 0, 0); // 红色
+    redMat.update();
+
+    // 应用材质
+    this._targetLookMarker.model.material = redMat;
+
+    var sceneRoot = this.app.root.findByName('SceneRoot');
+    (sceneRoot || this.app.root).addChild(this._targetLookMarker);
+
     // Animator 组件
     this._anim = this.entity.anim || (this.animEntity && this.animEntity.anim);
 
@@ -188,6 +203,10 @@ RobotPathMove.prototype.update = function (dt) {
     // 更新可视化 Marker
     if (this._targetMarker) {
         this._targetMarker.setPosition(target.x, target.y, target.z);
+    }
+    if (this._targetLookMarker) {
+        var look = node.lookAt;
+        this._targetLookMarker.setPosition(look.x, look.y, look.z);
     }
 
     var dist = this._moveDir.length();
