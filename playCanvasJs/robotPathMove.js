@@ -124,7 +124,7 @@ RobotPathMove.prototype.update = function (dt) {
 
     // 路径走完直接结束
     if (this._index >= this.path.length) {
-        _index = 0;
+        this._index = 0;
     };
 
     var node = this.path[this._index];
@@ -225,7 +225,8 @@ RobotPathMove.prototype.updateMoveRotation = function (dt) {
  * pause 节点的 lookAt 朝向控制
  * ========================================================= */
 RobotPathMove.prototype.updateLookAt = function (node, dt) {
-
+    var dir = this._moveDir;
+    if (dir.lengthSq() === 0) return;
     var pos = this.entity.getPosition();
     var look = node.lookAt;
 

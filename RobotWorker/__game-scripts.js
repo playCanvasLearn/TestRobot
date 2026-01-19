@@ -108,7 +108,6 @@ RotateSceneWithZoom.attributes.add("rotateSensitivity", {
 
 
 
-
 // 创建 PlayCanvas 脚本：机器人沿路径移动
 var RobotPathMove = pc.createScript('robotPathMove');
 
@@ -120,14 +119,11 @@ var RobotPathMove = pc.createScript('robotPathMove');
 // 如果不填，则默认使用当前 entity 本身旋转
 RobotPathMove.attributes.add('animEntity', { type: 'entity' });
 
-// 施加给刚体的力大小（越大加速越快）
-RobotPathMove.attributes.add('power', { type: 'number', default: 180000 });
-
 // 到达路径点的判定距离（小于该值认为“到点”）
 RobotPathMove.attributes.add('arriveDistance', { type: 'number', default: 0.15 });
 
 // 最大移动速度限制（防止物理速度失控）
-RobotPathMove.attributes.add('maxSpeed', { type: 'number', default: 1.2 });
+RobotPathMove.attributes.add('moveSpeed', { type: 'number', default: 0.8});
 
 // pause 节点停留时间（秒）
 RobotPathMove.attributes.add('pauseTime', { type: 'number', default: 2 });
@@ -145,9 +141,9 @@ RobotPathMove.prototype.initialize = function () {
      */
     this.path = [
         { showMessage: '去拿料', turn: '', position: { x: 1.5, y: 0.061, z: 0 }, lookAt: { x: 1.5, y: 0.061, z: 0.336 } },
-        { showMessage: '去拿料', turn: '', position: { x: 1.5, y: 0.061, z: 0.336 }, lookAt: { x: 1.5, y: 0.061, z: 0.5 } },
-        /* { showMessage: '拿料中', turn: 'pause', position: { x: 1.8, y: 0, z: 4.5 }, lookAt: { x: -3.8, y: 0, z: 6 } },
-         { showMessage: '去加工', turn: '', position: { x: 1.8, y: 0, z: 4.5 }, lookAt: { x: 1.8, y: 0, z: -6 } },
+        { showMessage: '去拿料', turn: '', position: { x: 1.5, y: 0.061, z: 1.336 }, lookAt: { x: 1.5, y: 0.061, z: 1.5 } },
+        { showMessage: '拿料中', turn: 'pause', position: { x: 1.5, y: 0.061, z: 2.5 }, lookAt: { x: 1.5, y: 0.061, z: 2.6 } },
+        /* { showMessage: '去加工', turn: '', position: { x: 1.8, y: 0, z: 4.5 }, lookAt: { x: 1.8, y: 0, z: -6 } },
          { showMessage: '去加工', turn: '', position: { x: 1.7, y: 0, z: 4.5 }, lookAt: { x: 1.7, y: 0, z: 2.5 } },
          { showMessage: '去加工', turn: '', position: { x: 1.7, y: 0, z: 2.5 }, lookAt: { x: 1.7, y: 0, z: 0.5 } },
          { showMessage: '去加工', turn: '', position: { x: 1.7, y: 0, z: 0.5 }, lookAt: { x: 1.7, y: 0, z: -1.1 } },
@@ -238,15 +234,14 @@ RobotPathMove.prototype.update = function (dt) {
 
     // 路径走完直接结束
     if (this._index >= this.path.length) {
-        _index = 0;
+        this._index = 0;
     };
 
     var node = this.path[this._index];
+    var target = node.position;
+
     var pos = this.entity.getPosition();
 
-    /* ===============================
-     * pause 节点逻辑
-     * =============================== */
     if (node.turn === 'pause') {
 
         // 累计停留时间
@@ -262,57 +257,49 @@ RobotPathMove.prototype.update = function (dt) {
         }
         return;
     }
-
-    /* ===============================
-     * 移动逻辑
-     * =============================== */
-
-    var targetPos = node.position;
-
-    // 只在 XZ 平面移动（忽略 Y）
+    // XZ 平面方向
     this._moveDir.set(
-        targetPos.x - pos.x,
+        target.x - pos.x,
         0,
-        targetPos.z - pos.z
+        target.z - pos.z
     );
 
     // 更新可视化 Marker
     if (this._targetMarker) {
-        this._targetMarker.setPosition(targetPos.x, targetPos.y, targetPos.z);
+        this._targetMarker.setPosition(target.x, target.y, target.z);
     }
 
     var dist = this._moveDir.length();
 
-    /* 到达路径点 */
-    if (dist < this.arriveDistance) {
+    /* ===== 到点 ===== */
+    if (dist <= this.arriveDistance) {
 
-        // 强制停止刚体（防止抖动）
-        this.entity.rigidbody.linearVelocity.set(0, 0, 0);
-        this.entity.rigidbody.angularVelocity.set(0, 0, 0);
+        // 精确贴点
+        this.entity.setPosition(
+            target.x,
+            target.y,
+            target.z
+        );
 
-        // 精确贴合到目标点
-        this.entity.setPosition(targetPos.x, targetPos.y, targetPos.z);
-
-        // 切换到下一个路径点
-        this._index++;
+        // 切换到另一个点（0 ↔ 1）
+        this._index = this._index + 1;
         return;
     }
 
-    // 方向归一化
+    /* ===== 位移移动（无物理） ===== */
     this._moveDir.normalize();
 
-    /* ===============================
-     * 施加力 + 限速
-     * =============================== */
-    var vel = this.entity.rigidbody.linearVelocity;
+    var step = this.moveSpeed * dt;
 
-    // 未达到最大速度才继续施加力
-    if (vel.length() < this.maxSpeed) {
-        this._moveDir.scale(this.power * dt);
-        this.entity.rigidbody.applyForce(this._moveDir);
-    }
+    // 防止跨过目标
+    if (step > dist) step = dist;
 
-    // 移动时同步朝向
+    pos.x += this._moveDir.x * step;
+    pos.z += this._moveDir.z * step;
+
+    this.entity.setPosition(pos);
+
+    // 朝向同步
     this.updateMoveRotation(dt);
 };
 
@@ -330,7 +317,7 @@ RobotPathMove.prototype.updateMoveRotation = function (dt) {
      * - 返回弧度，需要转成角度
      */
     this._targetAngle =
-        Math.atan2(dir.x, dir.z) * pc.math.RAD_TO_DEG + 180;
+        Math.atan2(dir.x, dir.z) * pc.math.RAD_TO_DEG;
 
     // 角度插值（平滑转身，防抖）
     this._angle = pc.math.lerpAngle(this._angle, this._targetAngle, 0.15);
@@ -348,7 +335,8 @@ RobotPathMove.prototype.updateMoveRotation = function (dt) {
  * pause 节点的 lookAt 朝向控制
  * ========================================================= */
 RobotPathMove.prototype.updateLookAt = function (node, dt) {
-
+    var dir = this._moveDir;
+    if (dir.lengthSq() === 0) return;
     var pos = this.entity.getPosition();
     var look = node.lookAt;
 
@@ -363,8 +351,7 @@ RobotPathMove.prototype.updateLookAt = function (node, dt) {
 
     this._lookDir.normalize();
 
-    this._targetAngle =
-        Math.atan2(this._lookDir.x, this._lookDir.z) * pc.math.RAD_TO_DEG + 180;
+    this._targetAngle =  Math.atan2(dir.x, dir.z) * pc.math.RAD_TO_DEG;
 
     this._angle = pc.math.lerpAngle(this._angle, this._targetAngle, 0.15);
 
