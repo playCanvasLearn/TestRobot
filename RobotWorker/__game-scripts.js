@@ -68,36 +68,15 @@ RotateScene.attributes.add("sensitivity", {
 }, RotateScene.prototype.update = function () {
     this.entity.setLocalEulerAngles(this.rotX, this.rotY, 0)
 };
-var RotateSceneWithZoom = pc.createScript("rotateSceneWithZoom");
-RotateSceneWithZoom.attributes.add("rotateSensitivity", {
-    type: "number",
-    default: .2
-}), RotateSceneWithZoom.attributes.add("zoomSensitivity", {
-    type: "number",
-    default: .1
-}), RotateSceneWithZoom.attributes.add("minScale", {
-    type: "number",
-    default: .3
-}), RotateSceneWithZoom.attributes.add("maxScale", {
-    type: "number",
-    default: 3
-}), RotateSceneWithZoom.attributes.add("limitX", {
-    type: "number",
-    default: 80
-}), RotateSceneWithZoom.prototype.initialize = function () {
-    var t = this.entity.getLocalEulerAngles(), e = this.entity.getLocalScale();
-    this.rotX = t.x, this.rotY = t.y, this.scale = e.x, this.dragging = !1, this.hasInput = !1, this.app.mouse.on(pc.EVENT_MOUSEDOWN, this.onMouseDown, this), this.app.mouse.on(pc.EVENT_MOUSEUP, this.onMouseUp, this), this.app.mouse.on(pc.EVENT_MOUSEMOVE, this.onMouseMove, this), this.app.mouse.on(pc.EVENT_MOUSEWHEEL, this.onMouseWheel, this)
-}, RotateSceneWithZoom.prototype.onMouseDown = function (t) {
-    t.button === pc.MOUSEBUTTON_LEFT && (this.dragging = !0, this.hasInput = !0)
-}, RotateSceneWithZoom.prototype.onMouseUp = function () {
-    this.dragging = !1
-}, RotateSceneWithZoom.prototype.onMouseMove = function (t) {
-    this.dragging && (this.hasInput = !0, this.rotY -= t.dx * this.rotateSensitivity, this.rotX -= t.dy * this.rotateSensitivity, this.rotX = pc.math.clamp(this.rotX, -this.limitX, this.limitX))
-}, RotateSceneWithZoom.prototype.onMouseWheel = function (t) {
-    this.hasInput = !0, this.scale += t.wheel * this.zoomSensitivity, this.scale = pc.math.clamp(this.scale, this.minScale, this.maxScale), this.entity.setLocalScale(this.scale, this.scale, this.scale)
-}, RotateSceneWithZoom.prototype.update = function () {
-    this.hasInput && this.entity.setLocalEulerAngles(this.rotX, this.rotY, 0)
-};
+
+
+
+
+
+
+
+
+
 
 
 
@@ -143,44 +122,45 @@ RobotPathMove.prototype.initialize = function () {
         { showMessage: '拿料中', turn: '', position: { x: 1.7, y: 0, z: 5.2 }, lookAt: { x: 1.7, y: 0, z: 5.3 } },
         { showMessage: '拿料中', turn: '', position: { x: 1.5, y: 0, z: 5.2 }, lookAt: { x: -3.5, y: 0, z: 5.3 } },
         { showMessage: '拿料中', turn: 'pause', position: { x: 1.5, y: 0, z: 5.2 }, lookAt: { x: -3.5, y: 0, z: 5.3 } },
+        { showMessage: '拿料中', turn: 'take', position: { x: 1.5, y: 0, z: 5.2 }, lookAt: { x: -3.5, y: 0, z: 5.3 } },
         { showMessage: '去加工', turn: '', position: { x: 1.7, y: 0, z: 4.5 }, lookAt: { x: 1.8, y: 0, z: -1.3 } },
         { showMessage: '去加工', turn: '', position: { x: 1.7, y: 0, z: 4.5 }, lookAt: { x: 1.7, y: 0, z: -1.3 } },
         { showMessage: '去加工', turn: '', position: { x: 1.7, y: 0, z: 2.5 }, lookAt: { x: 1.7, y: 0, z: -1.3 } },
         { showMessage: '去加工', turn: '', position: { x: 1.7, y: 0, z: 0.5 }, lookAt: { x: 1.7, y: 0, z: -1.3 } },
         { showMessage: '去加工', turn: '', position: { x: 1.7, y: 0, z: -1.1 }, lookAt: { x: 1.7, y: 0, z: -1.3 } },
         { showMessage: '去加工', turn: '', position: { x: 1.7, y: 0, z: -1.1 }, lookAt: { x: 0.4, y: 0, z: -1.3 } },
-        /*  { showMessage: '加工中', turn: 'pause', position: { x: 0.4, y: 0, z: -0.9 }, lookAt: { x: 0.4, y: 0, z: -0.9 } },
-          { showMessage: '去检测', turn: '', position: { x: 0.4, y: 0, z: -0.9 }, lookAt: { x: 0.4, y: 0, z: -1.9 } },
-          { showMessage: '去检测', turn: '', position: { x: 0.4, y: 0, z: -1.2 }, lookAt: { x: 0.4, y: 0, z: -2.9 } },
-          { showMessage: '去检测', turn: '', position: { x: 0.4, y: 0, z: -2.9 }, lookAt: { x: 0.4, y: 0, z: -3.9 } },
-          { showMessage: '去检测', turn: '', position: { x: 0.4, y: 0, z: -3.9 }, lookAt: { x: 0.4, y: 0, z: -6.4 } },
-          { showMessage: '去检测', turn: '', position: { x: 0.4, y: 0, z: -6.4 }, lookAt: { x: 0.4, y: 0, z: -7.5 } },
-          { showMessage: '检测中', turn: 'pause', position: { x: 0.3, y: 0, z: -6.5 }, lookAt: { x: -2, y: 0, z: -7.5 } },
-          { showMessage: '不合格', turn: '', position: { x: 0.31, y: 0, z: -6.5 }, lookAt: { x: -2, y: 0, z: -7.5 } },
-          { showMessage: '去加工', turn: '', position: { x: 0.3, y: 0, z: -6.5 }, lookAt: { x: 0.3, y: 0, z: -3.5 } },
-          { showMessage: '去加工', turn: '', position: { x: 0.3, y: 0, z: -3.5 }, lookAt: { x: 0.31, y: 0, z: -0.9 } },
-          { showMessage: '去加工', turn: '', position: { x: 0.31, y: 0, z: -0.9 }, lookAt: { x: 0.31, y: 0, z: -0.9 } },
-          { showMessage: '加工中', turn: 'pause', position: { x: 0.31, y: 0, z: -0.9 }, lookAt: { x: -2, y: 0, z: -0.9 } },
-          { showMessage: '去检测', turn: '', position: { x: 0.3, y: 0, z: -0.9 }, lookAt: { x: 0.3, y: 0, z: -0.9 } },
-          { showMessage: '去检测', turn: '', position: { x: 0.3, y: 0, z: -0.9 }, lookAt: { x: 0.3, y: 0, z: -1.9 } },
-          { showMessage: '去检测', turn: '', position: { x: 0.3, y: 0, z: -1.9 }, lookAt: { x: 0.3, y: 0, z: -3.9 } },
-          { showMessage: '去检测', turn: '', position: { x: 0.3, y: 0, z: -3.9 }, lookAt: { x: 0.3, y: 0, z: -6.4 } },
-          { showMessage: '去检测', turn: '', position: { x: 0.3, y: 0, z: -6.4 }, lookAt: { x: 0.31, y: 0, z: -6.5 } },
-          { showMessage: '检测中', turn: 'pause', position: { x: 0.31, y: 0, z: -6.5 }, lookAt: { x: -2, y: 0, z: -6.5 } },
-          { showMessage: '合格', turn: '', position: { x: 0.3, y: 0, z: -6.5 }, lookAt: { x: 0.29, y: 0, z: -6.5 } },
-          { showMessage: '去放料', turn: '', position: { x: 0.29, y: 0, z: -6.5 }, lookAt: { x: 0.29, y: 0, z: -3.7 } },
-          { showMessage: '去放料', turn: '', position: { x: 0.29, y: 0, z: -3.7 }, lookAt: { x: 0.3, y: 0, z: 0 } },
-          { showMessage: '去放料', turn: '', position: { x: 0.3, y: 0, z: 0 }, lookAt: { x: 0.3, y: 0, z: 2 } },
-          { showMessage: '去放料', turn: '', position: { x: 0.3, y: 0, z: 2 }, lookAt: { x: 0.3, y: 0, z: 2.7 } },
-          { showMessage: '去放料', turn: '', position: { x: 0.3, y: 0, z: 2.7 }, lookAt: { x: 0.3, y: 0, z: 2.7 } },
-          { showMessage: '去放料', turn: '', position: { x: 0.3, y: 0, z: 2.7 }, lookAt: { x: -1, y: 0, z: 2.7 } },
-          { showMessage: '去放料', turn: '', position: { x: -1, y: 0, z: 2.7 }, lookAt: { x: -1, y: 0, z: 2.7 } },
-          { showMessage: '去放料', turn: '', position: { x: -1, y: 0, z: 2.7 }, lookAt: { x: -1, y: 0, z: 2.7 } },
-          { showMessage: '去放料', turn: '', position: { x: -1, y: 0, z: 2.7 }, lookAt: { x: -1.2, y: 0, z: 4.5 } },
-          { showMessage: '放料中', turn: 'pause', position: { x: -1.2, y: 0, z: 4.5 }, lookAt: { x: -1.3, y: 0, z: 4.5 } },
-          { showMessage: '去拿料', turn: '', position: { x: -1.3, y: 0, z: 4.5 }, lookAt: { x: -1.3, y: 0, z: 2.7 } },
-          { showMessage: '去拿料', turn: '', position: { x: -1.3, y: 0, z: 2.7 }, lookAt: { x: 1.8, y: 0, z: 2.5 } },
-          { showMessage: '去拿料', turn: '', position: { x: 1.8, y: 0, z: 2.5 }, lookAt: { x: 1.8, y: 0, z: 4.5 } } */
+        { showMessage: '加工中', turn: 'pause', position: { x: 0.4, y: 0, z: -0.9 }, lookAt: { x: 0.4, y: 0, z: -0.9 } },
+        { showMessage: '去检测', turn: '', position: { x: 0.4, y: 0, z: -0.9 }, lookAt: { x: 0.4, y: 0, z: -1.9 } },
+        { showMessage: '去检测', turn: '', position: { x: 0.4, y: 0, z: -1.2 }, lookAt: { x: 0.4, y: 0, z: -2.9 } },
+        { showMessage: '去检测', turn: '', position: { x: 0.4, y: 0, z: -2.9 }, lookAt: { x: 0.4, y: 0, z: -3.9 } },
+        { showMessage: '去检测', turn: '', position: { x: 0.4, y: 0, z: -3.9 }, lookAt: { x: 0.4, y: 0, z: -6.4 } },
+        { showMessage: '去检测', turn: '', position: { x: 0.4, y: 0, z: -6.4 }, lookAt: { x: 0.4, y: 0, z: -7.5 } },
+        { showMessage: '检测中', turn: 'pause', position: { x: 0.3, y: 0, z: -6.5 }, lookAt: { x: -2, y: 0, z: -7.5 } },
+        /*{ showMessage: '不合格', turn: '', position: { x: 0.31, y: 0, z: -6.5 }, lookAt: { x: -2, y: 0, z: -7.5 } },
+        { showMessage: '去加工', turn: '', position: { x: 0.3, y: 0, z: -6.5 }, lookAt: { x: 0.3, y: 0, z: -3.5 } },
+        { showMessage: '去加工', turn: '', position: { x: 0.3, y: 0, z: -3.5 }, lookAt: { x: 0.31, y: 0, z: -0.9 } },
+        { showMessage: '去加工', turn: '', position: { x: 0.31, y: 0, z: -0.9 }, lookAt: { x: 0.31, y: 0, z: -0.9 } },
+        { showMessage: '加工中', turn: 'pause', position: { x: 0.31, y: 0, z: -0.9 }, lookAt: { x: -2, y: 0, z: -0.9 } },
+        { showMessage: '去检测', turn: '', position: { x: 0.3, y: 0, z: -0.9 }, lookAt: { x: 0.3, y: 0, z: -0.9 } },
+        { showMessage: '去检测', turn: '', position: { x: 0.3, y: 0, z: -0.9 }, lookAt: { x: 0.3, y: 0, z: -1.9 } },
+        { showMessage: '去检测', turn: '', position: { x: 0.3, y: 0, z: -1.9 }, lookAt: { x: 0.3, y: 0, z: -3.9 } },
+        { showMessage: '去检测', turn: '', position: { x: 0.3, y: 0, z: -3.9 }, lookAt: { x: 0.3, y: 0, z: -6.4 } },
+        { showMessage: '去检测', turn: '', position: { x: 0.3, y: 0, z: -6.4 }, lookAt: { x: 0.31, y: 0, z: -6.5 } },
+        { showMessage: '检测中', turn: 'pause', position: { x: 0.31, y: 0, z: -6.5 }, lookAt: { x: -2, y: 0, z: -6.5 } },
+        { showMessage: '合格', turn: '', position: { x: 0.3, y: 0, z: -6.5 }, lookAt: { x: 0.29, y: 0, z: -6.5 } },
+        { showMessage: '去放料', turn: '', position: { x: 0.29, y: 0, z: -6.5 }, lookAt: { x: 0.29, y: 0, z: -3.7 } },
+        { showMessage: '去放料', turn: '', position: { x: 0.29, y: 0, z: -3.7 }, lookAt: { x: 0.3, y: 0, z: 0 } },
+        { showMessage: '去放料', turn: '', position: { x: 0.3, y: 0, z: 0 }, lookAt: { x: 0.3, y: 0, z: 2 } },
+        { showMessage: '去放料', turn: '', position: { x: 0.3, y: 0, z: 2 }, lookAt: { x: 0.3, y: 0, z: 2.7 } },
+        { showMessage: '去放料', turn: '', position: { x: 0.3, y: 0, z: 2.7 }, lookAt: { x: 0.3, y: 0, z: 2.7 } },
+        { showMessage: '去放料', turn: '', position: { x: 0.3, y: 0, z: 2.7 }, lookAt: { x: -1, y: 0, z: 2.7 } },
+        { showMessage: '去放料', turn: '', position: { x: -1, y: 0, z: 2.7 }, lookAt: { x: -1, y: 0, z: 2.7 } },
+        { showMessage: '去放料', turn: '', position: { x: -1, y: 0, z: 2.7 }, lookAt: { x: -1, y: 0, z: 2.7 } },
+        { showMessage: '去放料', turn: '', position: { x: -1, y: 0, z: 2.7 }, lookAt: { x: -1.2, y: 0, z: 4.5 } },
+        { showMessage: '放料中', turn: 'pause', position: { x: -1.2, y: 0, z: 4.5 }, lookAt: { x: -1.3, y: 0, z: 4.5 } },
+        { showMessage: '去拿料', turn: '', position: { x: -1.3, y: 0, z: 4.5 }, lookAt: { x: -1.3, y: 0, z: 2.7 } },
+        { showMessage: '去拿料', turn: '', position: { x: -1.3, y: 0, z: 2.7 }, lookAt: { x: 1.8, y: 0, z: 2.5 } },
+        { showMessage: '去拿料', turn: '', position: { x: 1.8, y: 0, z: 2.5 }, lookAt: { x: 1.8, y: 0, z: 4.5 } } */
     ];
 
     // 当前路径索引
@@ -222,6 +202,15 @@ RobotPathMove.prototype.initialize = function () {
 
     var sceneRoot = this.app.root.findByName('SceneRoot');
     (sceneRoot || this.app.root).addChild(this._targetMarker);
+
+    // Animator 组件
+    this._anim = this.entity.anim || (this.animEntity && this.animEntity.anim);
+
+    // 当前动画状态，避免重复 set
+    this._playerStatus = 0;
+
+    // 初始默认为 idle
+    this.setPlayerStatus(2);
 };
 
 /* =========================================================
@@ -242,15 +231,32 @@ RobotPathMove.prototype.update = function (dt) {
 
     var pos = this.entity.getPosition();
 
+    // ===== pause 节点：walk → idle（纯停留）=====
     if (node.turn === 'pause') {
+        // 第一次进入 pause
+        if (this._pauseTimer === 0) {
+            this.setPlayerStatus(2); // walk → idle
+        }
 
-        // 累计停留时间
         this._pauseTimer += dt;
-
-        // 停留期间只转向，不移动
         this.updateLookAt(node, dt);
 
-        // 停留结束，进入下一个路径点
+        if (this._pauseTimer >= this.pauseTime) {
+            this._pauseTimer = 0;
+            this._index++;
+        }
+        return;
+    }
+    // ===== take 节点：idle → take =====
+    if (node.turn === 'take') {
+        // 第一次进入 take
+        if (this._pauseTimer === 0) {
+            this.setPlayerStatus(3); // idle → take
+        }
+
+        this._pauseTimer += dt;
+        this.updateLookAt(node, dt);
+
         if (this._pauseTimer >= this.pauseTime) {
             this._pauseTimer = 0;
             this._index++;
@@ -287,6 +293,7 @@ RobotPathMove.prototype.update = function (dt) {
     }
 
     /* ===== 位移移动（无物理） ===== */
+    this.setPlayerStatus(1);
     this._moveDir.normalize();
 
     var step = this.moveSpeed * dt;
@@ -383,4 +390,12 @@ RobotPathMove.prototype.onMouseDown = function (event) {
     var point = from.clone().add(dir.clone().scale(t));
 
     console.log('点击坐标:', point);
+};
+
+RobotPathMove.prototype.setPlayerStatus = function (status) {
+    if (!this._anim) return;
+    if (this._playerStatus === status) return;
+
+    this._playerStatus = status;
+    this._anim.setInteger('playerStatus', status);
 };
