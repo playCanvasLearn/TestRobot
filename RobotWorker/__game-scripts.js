@@ -104,9 +104,6 @@ RotateSceneWithZoom.attributes.add("rotateSensitivity", {
 
 
 
-
-
-
 // 创建 PlayCanvas 脚本：机器人沿路径移动
 var RobotPathMove = pc.createScript('robotPathMove');
 
@@ -139,11 +136,11 @@ RobotPathMove.prototype.initialize = function () {
      * - turn === 'pause' 表示停留节点
      */
     this.path = [
-        { showMessage: '去拿料', turn: '', position: { x: 1.5, y: 0.061, z: 0 }, lookAt: { x: 1.5, y: 0.061, z: 0.336 } },
-        { showMessage: '去拿料', turn: '', position: { x: 1.5, y: 0.061, z: 1.336 }, lookAt: { x: 1.5, y: 0.061, z: 1.5 } },
-        { showMessage: '去拿料', turn: '', position: { x: 1.5, y: 0.061, z: 2.5 }, lookAt: { x: 1.5, y: 0.061, z: 2.6 } },
-        { showMessage: '去拿料', turn: '', position: { x: 1.5, y: 0.061, z: 4.5 }, lookAt: { x: 1.5, y: 0.061, z: 4.6 } },
-        { showMessage: '拿料中', turn: 'pause', position: { x: 1.5, y: 0.061, z: 5.2 }, lookAt: { x: 1.5, y: 0.061, z: 5.3 } },
+        { showMessage: '去拿料', turn: '', position: { x: 1.5, y: 0, z: 0 }, lookAt: { x: 1.5, y: 0, z: 0.336 } },
+        { showMessage: '去拿料', turn: '', position: { x: 1.5, y: 0, z: 1.336 }, lookAt: { x: 1.5, y: 0, z: 1.5 } },
+        { showMessage: '去拿料', turn: '', position: { x: 1.5, y: 0, z: 2.5 }, lookAt: { x: 1.5, y: 0, z: 2.6 } },
+        { showMessage: '去拿料', turn: '', position: { x: 1.5, y: 0, z: 4.5 }, lookAt: { x: 1.5, y: 0, z: 4.6 } },
+        { showMessage: '拿料中', turn: 'pause', position: { x: 1.5, y: 0, z: 5.2 }, lookAt: { x: 1.5, y: 0, z: 5.3 } },
         { showMessage: '去加工', turn: '', position: { x: 1.7, y: 0, z: 4.5 }, lookAt: { x: 1.8, y: 0, z: -6 } },
         { showMessage: '去加工', turn: '', position: { x: 1.7, y: 0, z: 4.5 }, lookAt: { x: 1.7, y: 0, z: 2.5 } },
         { showMessage: '去加工', turn: '', position: { x: 1.7, y: 0, z: 2.5 }, lookAt: { x: 1.7, y: 0, z: 0.5 } },
