@@ -369,7 +369,7 @@ RobotPathMove.prototype.setPlayerStatus = function (status) {
 RobotPathMove.prototype._initLabelCanvas = function () {
 
     var canvas = document.createElement('canvas');
-    canvas.width = 512;
+    canvas.width = 256;
     canvas.height = 256;
 
     this._labelCanvas = canvas;
@@ -383,11 +383,20 @@ RobotPathMove.prototype._initLabelCanvas = function () {
     this._labelTexture = tex;
 
     var mat = new pc.StandardMaterial();
-    mat.diffuseMap = tex;
+    mat.emissiveMap = tex;
+    mat.emissive.set(1, 1, 1);
+    mat.emissiveIntensity = 1;
+    // 透明
     mat.opacityMap = tex;
     mat.opacity = 1;
     mat.blendType = pc.BLEND_NORMAL;
+
+    // UI 必须关深度写入
     mat.depthWrite = false;
+
+    // 可选：防止背面变暗
+    mat.cull = pc.CULLFACE_NONE;
+
     mat.update();
 
     var model = this.labelPlane.model || this.labelPlane.render;
@@ -421,7 +430,7 @@ RobotPathMove.prototype._updateLabel = function (text) {
 
     /* === 文字 === */
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 64px "Microsoft YaHei", Arial';
+    ctx.font = 'bold 80px "Microsoft YaHei", Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(text, w / 2, h / 2);
