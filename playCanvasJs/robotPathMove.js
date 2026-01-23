@@ -161,6 +161,9 @@ RobotPathMove.prototype.initialize = function () {
         this._initLabelCanvas();
         this._updateLabel(this.path[0].showMessage);
     }
+
+    this.screenPlane = this.app.root.findByName('屏幕');
+    this._initChartScreen();
 };
 
 /* =========================================================
@@ -273,6 +276,9 @@ RobotPathMove.prototype.update = function (dt) {
 
     // 朝向同步
     this.updateMoveRotation(dt);
+
+    // 更新图表
+    this._updateChart(dt);
 };
 
 /* =========================================================
@@ -445,3 +451,129 @@ RobotPathMove.prototype._getBgColor = function (text) {
     if (text.indexOf('中') !== -1) return 'rgba(70,130,220,0.85)';
     return 'rgba(0,0,0,0.65)';
 };
+
+RobotPathMove.prototype._initChartScreen = function () {
+
+    /* ---------- Canvas ---------- */
+    var canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 256;
+    canvas.style.display = 'none';
+    document.body.appendChild(canvas);
+
+    this._chartCanvas = canvas;
+
+    /* ---------- ECharts ---------- */
+    this._chart = echarts.init(canvas, null, { renderer: 'canvas' });
+
+    this._chartData = [];
+    this._chartTitle = '实时数据监控';
+
+    var now = Date.now();
+    for (var i = 9; i >= 0; i--) {
+        this._chartData.push({
+            time: now - i * 5000,
+            value: Math.random() * 100
+        });
+    }
+
+    /* ---------- PlayCanvas Texture ---------- */
+    var tex = new pc.Texture(this.app.graphicsDevice, {
+        format: pc.PIXELFORMAT_R8_G8_B8_A8,
+        autoMipmap: false
+    });
+    tex.setSource(canvas);
+    this._chartTexture = tex;
+
+    this._updateChartOption();
+    /* ---------- 材质（屏幕 / UI） ---------- */
+    var mat = new pc.StandardMaterial();
+    mat.emissiveMap = tex;
+    mat.emissive.set(1, 1, 1);
+    mat.emissiveIntensity = 1;
+
+    mat.opacity = 1;
+    mat.blendType = pc.BLEND_NORMAL;
+    mat.depthWrite = false;
+    mat.cull = pc.CULLFACE_NONE;
+    mat.update();
+
+    /* ---------- 绑定到 Plane ---------- */
+    var model = this.screenPlane.render || this.screenPlane.model;
+    if (!model) {
+        console.error('[Chart] screenPlane 没有 render/model');
+        return;
+    }
+    model.material = mat;
+
+    this._chartTimer = 0;
+};
+
+RobotPathMove.prototype._updateChartOption = function () {
+
+    var formatted = this._chartData.map(function (item) {
+        return {
+            time: new Date(item.time).toLocaleTimeString('zh-CN', { hour12: false }),
+            value: Number(item.value).toFixed(2)
+        };
+    });
+
+    var option = {
+        title: {
+            text: this._chartTitle,
+            textStyle: { color: '#fff', fontSize: 14 },
+            left: '10%',
+            top: '10%'
+        },
+        tooltip: {
+            trigger: 'axis',
+            textStyle: { color: '#fff' },
+            backgroundColor: 'rgba(0,0,0,0.3)'
+        },
+        xAxis: {
+            type: 'category',
+            data: formatted.map(d => d.time),
+            axisLine: { lineStyle: { color: '#fff' } },
+            axisLabel: { color: '#fff', fontSize: 10, rotate: 45 }
+        },
+        yAxis: {
+            type: 'value',
+            axisLine: { lineStyle: { color: '#fff' } },
+            axisLabel: { color: '#fff' },
+            splitLine: { show: false }
+        },
+        series: [{
+            type: 'line',
+            smooth: true,
+            data: formatted.map(d => d.value),
+            lineStyle: { color: '#00ff00' },
+            itemStyle: { color: '#00ff00' }
+        }],
+        backgroundColor: 'rgba(0,0,0,0.25)',
+        grid: { left: '12%', right: '10%', top: '30%', bottom: '35%' }
+    };
+
+    this._chart.setOption(option, true);
+    this._chartTexture.upload(); // ★ GPU 同步
+};
+
+RobotPathMove.prototype._updateChart = function (dt) {
+    /* === 图表刷新 === */
+    if (!this._chart) return;
+
+    this._chartTimer += dt;
+    if (this._chartTimer >= 5) {
+        this._chartTimer = 0;
+
+        this._chartData.push({
+            time: Date.now(),
+            value: Math.random() * 100
+        });
+
+        if (this._chartData.length > 10) {
+            this._chartData.shift();
+        }
+
+        this._updateChartOption();
+    }
+}
