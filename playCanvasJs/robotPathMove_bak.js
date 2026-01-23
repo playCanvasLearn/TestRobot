@@ -8,6 +8,8 @@ var RobotPathMove = pc.createScript('robotPathMove');
 // 用于控制动画朝向的实体（通常是模型节点）
 // 如果不填，则默认使用当前 entity 本身旋转
 RobotPathMove.attributes.add('animEntity', { type: 'entity' });
+RobotPathMove.attributes.add('labelPlane', { type: 'entity' });
+RobotPathMove.attributes.add('labelOffsetY', { type: 'number', default: 1.8 });
 
 // 到达路径点的判定距离（小于该值认为“到点”）
 RobotPathMove.attributes.add('arriveDistance', { type: 'number', default: 0.15 });
@@ -17,9 +19,6 @@ RobotPathMove.attributes.add('moveSpeed', { type: 'number', default: 0.8});
 
 // pause 节点停留时间（秒）
 RobotPathMove.attributes.add('pauseTime', { type: 'number', default: 2 });
-
-RobotPathMove.attributes.add('labelPlane', { type: 'entity' });
-RobotPathMove.attributes.add('labelOffsetY', { type: 'number', default: 1.8 });
 
 /* =========================================================
  * initialize：脚本初始化
@@ -89,68 +88,18 @@ RobotPathMove.prototype.initialize = function () {
         { showMessage: '去拿料', turn: '', position: { x: 1.8, y: 0, z: 2.5 }, lookAt: { x: 1.8, y: 0, z: 4.5 } } /**/
     ];
 
-    // 当前路径索引
     this._index = 0;
-
-    // pause 节点累计时间
     this._pauseTimer = 0;
 
-    // 复用向量，避免每帧 new 对象（性能优化）
-    this._moveDir = new pc.Vec3();   // 移动方向
-    this._lookDir = new pc.Vec3();   // 朝向方向
+    this._moveDir = new pc.Vec3();
+    this._lookDir = new pc.Vec3();
 
-    // 目标角度（Y 轴）
-    this._targetAngle = 0;
+    var initEuler = (this.animEntity || this.entity).getEulerAngles().clone();
+    this._baseEuler = initEuler;
+    this._angle = initEuler.y;
 
-    /**
-     * 记录初始欧拉角
-     * 用途：
-     * - 保留 X / Z 轴姿态
-     * - 只控制 Y 轴旋转
-     */
-    var initEuler = this.animEntity
-        ? this.animEntity.getEulerAngles().clone()
-        : this.entity.getEulerAngles().clone();
-
-    this._baseEuler = initEuler; // 初始姿态
-    this._angle = initEuler.y;   // 当前 Y 轴角度（用于插值）
-
-    // 监听鼠标点击（用于调试坐标）
-    this.app.mouse.on(pc.EVENT_MOUSEDOWN, this.onMouseDown, this);
-
-    /**
-     * 创建一个目标点可视化 Marker
-     * 方便在场景中看到当前移动目标
-     */
-    this._targetMarker = new pc.Entity('TargetMarker');
-    this._targetMarker.addComponent('model', { type: 'box' });
-    this._targetMarker.setLocalScale(0.3, 0.3, 0.3);
-
-    var sceneRoot = this.app.root.findByName('SceneRoot');
-    (sceneRoot || this.app.root).addChild(this._targetMarker);
-
-    this._targetLookMarker = new pc.Entity('TargetLookMarker');
-    this._targetLookMarker.addComponent('model', { type: 'sphere' });
-    this._targetLookMarker.setLocalScale(0.3, 0.3, 0.3);
-
-    // 创建红色材质
-    var redMat = new pc.StandardMaterial();
-    redMat.diffuse.set(1, 0, 0); // 红色
-    redMat.update();
-
-    // 应用材质
-    this._targetLookMarker.model.material = redMat;
-
-    var sceneRoot = this.app.root.findByName('SceneRoot');
-    (sceneRoot || this.app.root).addChild(this._targetLookMarker);
-
-    // Animator 组件
     this._anim = this.entity.anim || (this.animEntity && this.animEntity.anim);
-
-    // 当前动画状态，避免重复 set
-    this._playerStatus = 0;
-
-    // 初始默认为 idle
+    this._playerStatus = -1;
     this.setPlayerStatus(2);
 
     /* ===== 创建 Plane 标签 ===== */
@@ -163,209 +112,8 @@ RobotPathMove.prototype.initialize = function () {
     }
 };
 
-/* =========================================================
- * update：每帧更新
- * ========================================================= */
-RobotPathMove.prototype.update = function (dt) {
-
-    // 必须有刚体才能移动
-    if (!this.entity.rigidbody) return;
-
-    // 路径走完直接结束
-    if (this._index >= this.path.length) {
-        this._index = 0;
-    };
-
-    var node = this.path[this._index];
-    var target = node.position;
-
-    var pos = this.entity.getPosition();
-
-    /* === 标签文字切换 === */
-    if (node.showMessage !== this._lastMessage) {
-        this._lastMessage = node.showMessage;
-        this._updateLabel(node.showMessage);
-    }
-
-    /* === Billboard === */
-    if (this.labelPlane && this._camera) {
-        this.labelPlane.lookAt(this._camera.getPosition());
-        this.labelPlane.setLocalPosition(0, this.labelOffsetY, 0);
-    }
-    // ===== pause 节点：walk → idle（纯停留）=====
-    if (node.turn === 'pause') {
-        // 第一次进入 pause
-        if (this._pauseTimer === 0) {
-            this.setPlayerStatus(2); // walk → idle
-        }
-
-        this._pauseTimer += dt;
-        this.updateLookAt(node, dt);
-
-        if (this._pauseTimer >= this.pauseTime) {
-            this._pauseTimer = 0;
-            this._index++;
-        }
-        return;
-    }
-    // ===== take 节点：idle → take =====
-    if (node.turn === 'take') {
-        // 第一次进入 take
-        if (this._pauseTimer === 0) {
-            this.setPlayerStatus(3); // idle → take
-        }
-
-        this._pauseTimer += dt;
-        this.updateLookAt(node, dt);
-
-        if (this._pauseTimer >= this.pauseTime) {
-            this._pauseTimer = 0;
-            this._index++;
-        }
-        return;
-    }
-    // XZ 平面方向
-    this._moveDir.set(
-        target.x - pos.x,
-        0,
-        target.z - pos.z
-    );
-
-    // 更新可视化 Marker
-    if (this._targetMarker) {
-        this._targetMarker.setPosition(target.x, target.y, target.z);
-    }
-    if (this._targetLookMarker) {
-        var look = node.lookAt;
-        this._targetLookMarker.setPosition(look.x, look.y, look.z);
-    }
-
-    var dist = this._moveDir.length();
-
-    /* ===== 到点 ===== */
-    if (dist <= this.arriveDistance) {
-
-        // 精确贴点
-        this.entity.setPosition(
-            target.x,
-            target.y,
-            target.z
-        );
-
-        // 切换到另一个点
-        this._index = this._index + 1 ;
-        return;
-    }
-
-    /* ===== 位移移动（无物理） ===== */
-    this.setPlayerStatus(1);
-    this._moveDir.normalize();
-
-    var step = this.moveSpeed * dt;
-
-    // 防止跨过目标
-    if (step > dist) step = dist;
-
-    pos.x += this._moveDir.x * step;
-    pos.z += this._moveDir.z * step;
-
-    this.entity.setPosition(pos);
-
-    // 朝向同步
-    this.updateMoveRotation(dt);
-};
-
-/* =========================================================
- * 移动时的朝向控制（面向移动方向）
- * ========================================================= */
-RobotPathMove.prototype.updateMoveRotation = function (dt) {
-
-    var dir = this._moveDir;
-    if (dir.lengthSq() === 0) return;
-
-    /**
-     * atan2(x, z)：
-     * - PlayCanvas 默认前方是 +Z
-     * - 返回弧度，需要转成角度
-     */
-    this._targetAngle =
-        Math.atan2(dir.x, dir.z) * pc.math.RAD_TO_DEG;
-
-    // 角度插值（平滑转身，防抖）
-    this._angle = pc.math.lerpAngle(this._angle, this._targetAngle, 0.15);
-
-    // 只控制 Y 轴，X/Z 保持初始姿态
-    var baseX = this._baseEuler.x;
-    var baseZ = this._baseEuler.z;
-
-    // 优先控制 animEntity（模型）
-    (this.animEntity || this.entity)
-        .setEulerAngles(baseX, this._angle, baseZ);
-};
-
-/* =========================================================
- * pause 节点的 lookAt 朝向控制
- * ========================================================= */
-RobotPathMove.prototype.updateLookAt = function (node, dt) {
-    var dir = this._moveDir;
-    if (dir.lengthSq() === 0) return;
-    var pos = this.entity.getPosition();
-    var look = node.lookAt;
-
-    // 计算朝向向量（XZ 平面）
-    this._lookDir.set(
-        look.x - pos.x,
-        0,
-        look.z - pos.z
-    );
-
-    if (this._lookDir.lengthSq() === 0) return;
-
-    this._lookDir.normalize();
-
-    this._targetAngle =  Math.atan2(dir.x, dir.z) * pc.math.RAD_TO_DEG;
-
-    this._angle = pc.math.lerpAngle(this._angle, this._targetAngle, 0.15);
-
-    var baseX = this._baseEuler.x;
-    var baseZ = this._baseEuler.z;
-
-    (this.animEntity || this.entity)
-        .setEulerAngles(baseX, this._angle, baseZ);
-};
-
-/* =========================================================
- * 鼠标点击：输出点击到地面的世界坐标（调试用）
- * ========================================================= */
-RobotPathMove.prototype.onMouseDown = function (event) {
-
-    var cameraEntity = this.app.root.findByName('Camera');
-    if (!cameraEntity || !cameraEntity.camera) return;
-
-    var camera = cameraEntity.camera;
-
-    // 屏幕坐标 → 世界射线
-    var from = camera.screenToWorld(event.x, event.y, camera.nearClip);
-    var to   = camera.screenToWorld(event.x, event.y, camera.farClip);
-
-    var dir = to.clone().sub(from).normalize();
-
-    // 与 y = 0 平面的交点
-    var t = -from.y / dir.y;
-    var point = from.clone().add(dir.clone().scale(t));
-
-    console.log('点击坐标:', point);
-};
-
-RobotPathMove.prototype.setPlayerStatus = function (status) {
-    if (!this._anim) return;
-    if (this._playerStatus === status) return;
-
-    this._playerStatus = status;
-    this._anim.setInteger('playerStatus', status);
-};
-
 /* ---------- Plane 标签系统 ---------- */
+
 RobotPathMove.prototype._initLabelCanvas = function () {
 
     var canvas = document.createElement('canvas');
@@ -390,12 +138,7 @@ RobotPathMove.prototype._initLabelCanvas = function () {
     mat.depthWrite = false;
     mat.update();
 
-    var model = this.labelPlane.model || this.labelPlane.render;
-    if (!model) {
-        console.error('[LabelPlane] 没有 Model / Render 组件');
-        return;
-    }
-    model.material = mat;
+    this.labelPlane.model.material = mat;
 };
 
 RobotPathMove.prototype._updateLabel = function (text) {
@@ -435,4 +178,82 @@ RobotPathMove.prototype._getBgColor = function (text) {
     if (text === '合格')   return 'rgba(60,180,90,0.85)';
     if (text.indexOf('中') !== -1) return 'rgba(70,130,220,0.85)';
     return 'rgba(0,0,0,0.65)';
+};
+
+/* ---------- update ---------- */
+
+RobotPathMove.prototype.update = function (dt) {
+
+    if (!this.entity.rigidbody) return;
+    if (this._index >= this.path.length) this._index = 0;
+
+    var node = this.path[this._index];
+
+    /* === 标签文字切换 === */
+    if (node.showMessage !== this._lastMessage) {
+        this._lastMessage = node.showMessage;
+        this._updateLabel(node.showMessage);
+    }
+
+    /* === Billboard === */
+    if (this.labelPlane && this._camera) {
+        this.labelPlane.lookAt(this._camera.getPosition());
+        this.labelPlane.setLocalPosition(0, this.labelOffsetY, 0);
+    }
+
+    var pos = this.entity.getPosition();
+    var target = node.position;
+
+    /* pause */
+    if (node.turn === 'pause' || node.turn === 'take') {
+        if (this._pauseTimer === 0) {
+            this.setPlayerStatus(node.turn === 'take' ? 3 : 2);
+        }
+        this._pauseTimer += dt;
+        if (this._pauseTimer >= this.pauseTime) {
+            this._pauseTimer = 0;
+            this._index++;
+        }
+        return;
+    }
+
+    this._moveDir.set(target.x - pos.x, 0, target.z - pos.z);
+    var dist = this._moveDir.length();
+
+    if (dist <= this.arriveDistance) {
+        this.entity.setPosition(target.x, target.y, target.z);
+        this._index++;
+        return;
+    }
+
+    this.setPlayerStatus(1);
+    this._moveDir.normalize();
+
+    var step = Math.min(this.moveSpeed * dt, dist);
+    pos.x += this._moveDir.x * step;
+    pos.z += this._moveDir.z * step;
+    this.entity.setPosition(pos);
+
+    this._updateRotation(dt);
+};
+
+/* ---------- 朝向 ---------- */
+
+RobotPathMove.prototype._updateRotation = function (dt) {
+    var dir = this._moveDir;
+    if (dir.lengthSq() === 0) return;
+
+    var targetAngle = Math.atan2(dir.x, dir.z) * pc.math.RAD_TO_DEG;
+    this._angle = pc.math.lerpAngle(this._angle, targetAngle, 0.15);
+
+    (this.animEntity || this.entity)
+        .setEulerAngles(this._baseEuler.x, this._angle, this._baseEuler.z);
+};
+
+/* ---------- 动画 ---------- */
+
+RobotPathMove.prototype.setPlayerStatus = function (status) {
+    if (!this._anim || this._playerStatus === status) return;
+    this._playerStatus = status;
+    this._anim.setInteger('playerStatus', status);
 };
