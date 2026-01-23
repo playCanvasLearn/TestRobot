@@ -189,8 +189,8 @@ RobotPathMove.prototype.update = function (dt) {
 
     /* === Billboard === */
     if (this.labelPlane && this._camera) {
-        this.labelPlane.lookAt(this._camera.getPosition());
-        this.labelPlane.setLocalPosition(0, this.labelOffsetY, 0);
+        //this.labelPlane.lookAt(this._camera.getPosition());
+        //this.labelPlane.setLocalPosition(0, this.labelOffsetY, 0);
     }
     // ===== pause 节点：walk → idle（纯停留）=====
     if (node.turn === 'pause') {
