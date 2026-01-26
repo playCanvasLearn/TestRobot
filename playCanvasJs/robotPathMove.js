@@ -203,6 +203,10 @@ RobotPathMove.prototype.update = function (dt) {
     if (node.showMessage !== this._lastMessage) {
         this._lastMessage = node.showMessage;
         this._updateLabel(node.showMessage);
+        
+        // 更新图表标题
+        this._chartTitle = node.showMessage;
+        this._updateChartOption();
     }
 
     /* === Billboard === */
@@ -292,8 +296,13 @@ RobotPathMove.prototype.update = function (dt) {
     // 朝向同步
     this.updateMoveRotation(dt);
 
-    // 更新图表
+    // 更新图表数据逻辑
     this._updateChart(dt);
+
+    // 关键修复：每一帧都上传 Canvas 纹理，以便显示 ECharts 的动画效果
+    if (this._chartTexture && this._chartCanvas) {
+        this._chartTexture.upload();
+    }
 };
 
 /* =========================================================
@@ -492,10 +501,13 @@ RobotPathMove.prototype._initChartScreen = function(meshInstance) {
     this._chartTitle = '实时数据监控:';
     
     var now = Date.now();
+    var lastVal = 50;
     for (var i = 9; i >= 0; i--) {
+        lastVal = lastVal + (Math.random() - 0.5) * 20;
+        lastVal = Math.max(0, Math.min(100, lastVal));
         this._chartData.push({
             time: now - i * 5000,
-            value: Math.random() * 100
+            value: lastVal
         });
     }
 
@@ -641,11 +653,16 @@ RobotPathMove.prototype._updateChartOption = function() {
             type: 'line',
             smooth: true,
             lineStyle: { color: '#00ff00' },
-            itemStyle: { color: '#00ff00' }
+            itemStyle: { color: '#00ff00' },
+            animationDelay: function (idx) {
+                // 简单的生长动画效果
+                return idx * 50;
+            }
         }],
-        backgroundColor: '#000000',
+        backgroundColor: 'rgba(0,0,0,0.8)', // 半透明黑色背景，与 Three.js 版本保持一致
         grid: { left: '12%', right: '10%', top: '30%', bottom: '35%' },
-        animation: false
+        animation: true,
+        animationDuration: 1000
     };
 
     // 更新 echarts
@@ -665,9 +682,15 @@ RobotPathMove.prototype._updateChart = function (dt) {
     if (this._chartTimer >= 5) {
         this._chartTimer = 0;
 
+        var lastValue = this._chartData.length > 0 ? this._chartData[this._chartData.length - 1].value : 50;
+        // 模拟平滑波动，而不是纯随机
+        var newValue = lastValue + (Math.random() - 0.5) * 20;
+        // 限制在 0-100 之间
+        newValue = Math.max(0, Math.min(100, newValue));
+
         this._chartData.push({
             time: Date.now(),
-            value: Math.random() * 100
+            value: newValue
         });
 
         if (this._chartData.length > 10) {
