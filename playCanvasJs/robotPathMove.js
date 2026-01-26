@@ -511,26 +511,89 @@ RobotPathMove.prototype._initChartScreen = function(meshInstance) {
     tex.setSource(canvas);
     this._chartTexture = tex;
 
-    // 4️⃣ 检查并生成 UV
-    if (!this._hasUV(mesh)) {
-        this._generatePlaneUV(meshInstance);
+    // 4️⃣ 创建覆盖用的 Plane (解决 UV/Mesh 问题)
+    // 计算原始 Mesh 的 AABB (局部坐标)
+    var mesh = meshInstance.mesh;
+    var positions = [];
+    mesh.getPositions(positions);
+    var minX=Infinity, maxX=-Infinity, minY=Infinity, maxY=-Infinity, minZ=Infinity, maxZ=-Infinity;
+    for(var i=0; i<positions.length; i+=3) {
+        var x=positions[i], y=positions[i+1], z=positions[i+2];
+        if(x<minX) minX=x; if(x>maxX) maxX=x;
+        if(y<minY) minY=y; if(y>maxY) maxY=y;
+        if(z<minZ) minZ=z; if(z>maxZ) maxZ=z;
     }
+    
+    var width = maxX - minX;
+    var height = maxY - minY;
+    var depth = maxZ - minZ;
+    
+    console.log("Original Mesh AABB:", width, height, depth);
+    
+    // 创建一个新的 Entity 作为屏幕显示层
+    var screenPlane = new pc.Entity("ChartScreenOverlay");
+    screenPlane.addComponent('model', {
+        type: 'plane',
+        castShadows: false,
+        receiveShadows: false
+    });
+    
+    // 挂载到原来的节点下
+    meshInstance.node.addChild(screenPlane);
+    
+    // 定位到 AABB 中心
+    var centerX = (minX + maxX) / 2;
+    var centerY = (minY + maxY) / 2;
+    var centerZ = (minZ + maxZ) / 2;
+    screenPlane.setLocalPosition(centerX, centerY, centerZ);
+    
+    // 调整旋转和缩放
+    // 根据之前的日志，是一个 XY 平面 (width=1.8, height=1.2, depth=0.15)
+    // Plane 默认是 XZ 平面，法线朝上 (+Y)
+    // 我们需要把它立起来，变成 XY 平面，法线朝前 (+Z) -> 绕 X 轴旋转 90 度
+    screenPlane.setLocalEulerAngles(90, 0, 0);
+    
+    // 缩放：Plane 默认 1x1
+    // X 对应 width, Z (原Y) 对应 height
+    screenPlane.setLocalScale(width, 1, height);
+    
+    // 稍微往前挪一点点，防止 Z-fighting (虽然我们要隐藏原 Mesh，但为了保险)
+    screenPlane.translateLocal(0, 0.01, 0); 
+    
+    // 隐藏原来的 MeshInstance
+    meshInstance.visible = false;
+    
+    console.log("Created Overlay Plane at", centerX, centerY, centerZ, "Size:", width, height);
 
     // 5️⃣ 给材质赋值
-    material.diffuseMap = tex;
-    // 使用 emissive 可以让屏幕在暗处也发光，类似显示器
-    material.emissiveMap = tex; 
+    console.log("Setting material textures. Texture:", tex);
     
-    // 设置基础颜色为黑色，避免叠加变白
-    material.diffuse = new pc.Color(0, 0, 0);
-    material.emissive = new pc.Color(1, 1, 1);
-    material.specular = new pc.Color(0, 0, 0); // 去掉反光
+    // 创建材质
+    var newMat = new pc.StandardMaterial();
+    newMat.name = "ChartMaterial_ECharts";
     
-    material.useLighting = false; // 不受光照影响
-    material.update();
+    newMat.diffuseMap = tex;
+    newMat.diffuse = new pc.Color(1, 1, 1);
+    
+    newMat.emissiveMap = tex;
+    newMat.emissive = new pc.Color(1, 1, 1);
+    
+    newMat.useLighting = false; // 自发光不需要光照
+    newMat.cull = pc.CULLFACE_NONE; // 双面渲染
+    
+    newMat.update();
+    
+    // 赋值给新 Plane
+    screenPlane.model.material = newMat;
+    
+    console.log("Assigned ECharts material to Overlay Plane.");
 
     // 6️⃣ 首次渲染
-    this._updateChartOption();
+    // 延迟一帧渲染
+    setTimeout(() => {
+        this._updateChartOption();
+    }, 100);
+
 };
 
 
@@ -591,6 +654,7 @@ RobotPathMove.prototype._updateChartOption = function() {
     // 刷新材质贴图
     this._chartTexture.setSource(this._chartCanvas);
     this._chartTexture.upload();
+    // console.log("Chart texture uploaded in _updateChartOption");
 };
 
 RobotPathMove.prototype._updateChart = function (dt) {
@@ -691,6 +755,9 @@ RobotPathMove.prototype._generatePlaneUV = function (meshInstance) {
     var width = maxU - minU;
     var height = maxV - minV;
     
+    console.log("UV Bounds - minU:", minU, "maxU:", maxU, "minV:", minV, "maxV:", maxV);
+    console.log("UV Dimensions - width:", width, "height:", height);
+
     if (width < 0.0001) width = 1;
     if (height < 0.0001) height = 1;
 
@@ -700,14 +767,26 @@ RobotPathMove.prototype._generatePlaneUV = function (meshInstance) {
         var vVal = positions[i * 3 + vAxis];
 
         // 简单的归一化映射，如果发现倒了可能需要 1.0 - ...
-        uvs.push((uVal - minU) / width);
-        uvs.push((vVal - minV) / height);
+        var u = (uVal - minU) / width;
+        var v = (vVal - minV) / height;
+        uvs.push(u);
+        uvs.push(v);
+        
+        if (i < 5) console.log("UV[", i, "]:", u, v);
     }
 
     // 创建新 Mesh，确保包含 UV 语义
-    var newMesh = new pc.Mesh(mesh.device);
+    console.log("Creating new Mesh...");
+    var device = mesh.device || (this.app ? this.app.graphicsDevice : null);
+    if (!device) {
+        console.error("No graphics device found!");
+        return;
+    }
+
+    var newMesh = new pc.Mesh(device);
     newMesh.setPositions(positions);
     newMesh.setUvs(0, uvs);
+    console.log("Positions and UVs set.");
     
     if (normals.length > 0) {
         newMesh.setNormals(normals);
@@ -717,11 +796,25 @@ RobotPathMove.prototype._generatePlaneUV = function (meshInstance) {
     if (mesh.indexBuffer) {
         var indices = [];
         mesh.getIndices(indices);
+        // Fallback if getIndices didn't populate the array (some versions return it)
+        if (indices.length === 0) {
+             var returnedIndices = mesh.getIndices();
+             if (returnedIndices && returnedIndices.length > 0) {
+                 indices = returnedIndices;
+             }
+        }
+        console.log("Indices count:", indices.length);
         newMesh.setIndices(indices);
+    } else {
+        console.warn("Original mesh has no index buffer.");
+        // 如果没有索引，可能需要手动生成或者不需要（视具体几何体而定，但通常都有）
+        // 这里假设是常规模型
     }
 
     newMesh.update();
+    console.log("New mesh updated.");
     
     // 替换 MeshInstance 的 mesh
     meshInstance.mesh = newMesh;
+    console.log("MeshInstance mesh replaced.");
 };
