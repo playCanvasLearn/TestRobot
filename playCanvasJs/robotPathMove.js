@@ -49,7 +49,9 @@ RobotPathMove.prototype.initialize = function () {
         { showMessage: '去加工', turn: '', position: { x: 1.7, y: 0, z: -1.1 }, lookAt: { x: 0.4, y: 0, z: -1.3 } },
         { showMessage: '加工中', turn: '', position: { x: 0.4, y: 0, z: -0.9 }, lookAt: { x: 0.4, y: 0, z: -0.9 } },
         { showMessage: '加工中', turn: 'pause', position: { x: 0.4, y: 0, z: -0.9 }, lookAt: { x: 0.4, y: 0, z: -0.9 } },
+        { showMessage: '加工中', turn: 'openDoor', position: { x: 0.4, y: 0, z: -0.9 }, lookAt: { x: 0.4, y: 0, z: -0.9 } },
         { showMessage: '加工中', turn: 'take', position: { x: 0.4, y: 0, z: -0.9 }, lookAt: { x: 0.4, y: 0, z: -0.9 } },
+        { showMessage: '加工中', turn: 'closeDoor', position: { x: 0.4, y: 0, z: -0.9 }, lookAt: { x: 0.4, y: 0, z: -0.9 } },
         { showMessage: '去检测', turn: '', position: { x: 0.4, y: 0, z: -0.9 }, lookAt: { x: 0.4, y: 0, z: -1.9 } },
         { showMessage: '去检测', turn: '', position: { x: 0.4, y: 0, z: -1.2 }, lookAt: { x: 0.4, y: 0, z: -2.9 } },
         { showMessage: '去检测', turn: '', position: { x: 0.4, y: 0, z: -2.9 }, lookAt: { x: 0.4, y: 0, z: -3.9 } },
@@ -61,9 +63,11 @@ RobotPathMove.prototype.initialize = function () {
         { showMessage: '去加工', turn: '', position: { x: 0.2, y: 0, z: -6.5 }, lookAt: { x: 0.3, y: 0, z: -3.5 } },
         { showMessage: '去加工', turn: '', position: { x: 0.2, y: 0, z: -3.5 }, lookAt: { x: 0.3, y: 0, z: -1 } },
         { showMessage: '去加工', turn: '', position: { x: 0.2, y: 0, z: -0.9 }, lookAt: { x: 0.3, y: 0, z: -1 } },
-        { showMessage: '加工中', turn: '', position: { x: 0.2, y: 0, z: -0.9 }, lookAt: { x: -2, y: 0, z: -1 } },
-        { showMessage: '加工中', turn: 'pause', position: { x: 0.2, y: 0, z: -0.9 }, lookAt: { x: -2, y: 0, z: -1 } },
-        { showMessage: '加工中', turn: 'take', position: { x: 0.2, y: 0, z: -0.9 }, lookAt: { x: -2, y: 0, z: -1 } },
+        { showMessage: '加工中', turn: '', position: { x: 0.4, y: 0, z: -0.9 }, lookAt: { x: 0.4, y: 0, z: -0.9 } },
+        { showMessage: '加工中', turn: 'pause', position: { x: 0.4, y: 0, z: -0.9 }, lookAt: { x: 0.4, y: 0, z: -0.9 } },
+        { showMessage: '加工中', turn: 'openDoor', position: { x: 0.4, y: 0, z: -0.9 }, lookAt: { x: 0.4, y: 0, z: -0.9 } },
+        { showMessage: '加工中', turn: 'take', position: { x: 0.4, y: 0, z: -0.9 }, lookAt: { x: 0.4, y: 0, z: -0.9 } },
+        { showMessage: '加工中', turn: 'closeDoor', position: { x: 0.4, y: 0, z: -0.9 }, lookAt: { x: 0.4, y: 0, z: -0.9 } },
         { showMessage: '去检测', turn: '', position: { x: 0.2, y: 0, z: -0.9 }, lookAt: { x: 0.3, y: 0, z: -1 } },
         { showMessage: '去检测', turn: '', position: { x: 0.2, y: 0, z: -0.9 }, lookAt: { x: 0.3, y: 0, z: -1.9 } },
         { showMessage: '去检测', turn: '', position: { x: 0.2, y: 0, z: -1.9 }, lookAt: { x: 0.3, y: 0, z: -3.9 } },
@@ -118,6 +122,33 @@ RobotPathMove.prototype.initialize = function () {
     // 监听鼠标点击（用于调试坐标）
     this.app.mouse.on(pc.EVENT_MOUSEDOWN, this.onMouseDown, this);
 
+    /* ===== 门控制初始化 ===== */
+    this._leftDoor = null;
+    this._rightDoor = null;
+    this._doorInitZ_L = 0;
+    this._doorInitZ_R = 0;
+    this._doorProgress = 0; // 0:关闭, 1:开启
+    this._doorDir = 0;      // 0:不动, 1:开, -1:关
+
+    // 查找门实体（遍历场景）
+    var self = this;
+    this.app.root.forEach(function(node) {
+        if (node.name.indexOf('左侧门') !== -1) {
+            self._leftDoor = node;
+            self._doorInitZ_L = node.getLocalPosition().z;
+        }
+        if (node.name.indexOf('右侧门') !== -1) {
+            self._rightDoor = node;
+            self._doorInitZ_R = node.getLocalPosition().z;
+        }
+    });
+
+    if (this._leftDoor && this._rightDoor) {
+        console.log("Doors found:", this._leftDoor.name, this._rightDoor.name);
+    } else {
+        console.warn("Doors NOT found in scene!");
+    }
+
     /**
      * 创建一个目标点可视化 Marker
      * 方便在场景中看到当前移动目标
@@ -171,11 +202,11 @@ RobotPathMove.prototype.initialize = function () {
             // 如果没有明确名称，可能需要进一步判断，暂时默认找第一个不是支架的（如果能区分）
             // 或者对所有 meshInstances 进行遍历判断
             var targetMeshInstance = meshInstances[0];
-            
+
             // 简单 heuristic: 假设屏幕面板的材质名字可能特殊
             // 但如果导入的模型没有命名好，可能比较难。
             // 为了安全起见，克隆材质是必须的。
-            
+
             this._initChartScreen(targetMeshInstance);
         }
     }
@@ -185,6 +216,17 @@ RobotPathMove.prototype.initialize = function () {
  * update：每帧更新
  * ========================================================= */
 RobotPathMove.prototype.update = function (dt) {
+
+    /* ===== 始终更新的逻辑 (门动画、图表刷新) ===== */
+    this._updateDoors(dt);
+
+    // 更新图表数据逻辑
+    this._updateChart(dt);
+
+    // 关键修复：每一帧都上传 Canvas 纹理，以便显示 ECharts 的动画效果
+    if (this._chartTexture && this._chartCanvas) {
+        this._chartTexture.upload();
+    }
 
     // 必须有刚体才能移动
     if (!this.entity.rigidbody) return;
@@ -203,7 +245,7 @@ RobotPathMove.prototype.update = function (dt) {
     if (node.showMessage !== this._lastMessage) {
         this._lastMessage = node.showMessage;
         this._updateLabel(node.showMessage);
-        
+
         // 更新图表标题
         this._chartTitle = node.showMessage;
         this._updateChartOption();
@@ -246,6 +288,19 @@ RobotPathMove.prototype.update = function (dt) {
         }
         return;
     }
+    // ===== openDoor 节点：触发开门 =====
+    if (node.turn === 'openDoor') {
+        this._doorDir = 1; // 开始开门
+        this._index++;     // 立即进入下一节点，不阻塞
+        return;
+    }
+    // ===== closeDoor 节点：触发关门 =====
+    if (node.turn === 'closeDoor') {
+        this._doorDir = -1; // 开始关门
+        this._index++;      // 立即进入下一节点，不阻塞
+        return;
+    }
+
     // XZ 平面方向
     this._moveDir.set(
         target.x - pos.x,
@@ -295,14 +350,6 @@ RobotPathMove.prototype.update = function (dt) {
 
     // 朝向同步
     this.updateMoveRotation(dt);
-
-    // 更新图表数据逻辑
-    this._updateChart(dt);
-
-    // 关键修复：每一帧都上传 Canvas 纹理，以便显示 ECharts 的动画效果
-    if (this._chartTexture && this._chartCanvas) {
-        this._chartTexture.upload();
-    }
 };
 
 /* =========================================================
@@ -393,6 +440,36 @@ RobotPathMove.prototype.setPlayerStatus = function (status) {
 
     this._playerStatus = status;
     this._anim.setInteger('playerStatus', status);
+};
+
+/* ---------- 门动画逻辑 ---------- */
+RobotPathMove.prototype._updateDoors = function (dt) {
+    if (!this._leftDoor || !this._rightDoor || this._doorDir === 0) return;
+
+    // 3秒内完成移动，速度 = 1/3
+    var speed = 1.0 / 3.0;
+
+    this._doorProgress += dt * speed * this._doorDir;
+    this._doorProgress = pc.math.clamp(this._doorProgress, 0, 1);
+
+    // 更新位置
+    // 左门：初始Z + 进度 (向+Z移动)
+    // 右门：初始Z - 进度 (向-Z移动)
+    // 假设移动距离为 1.0 (根据 demo2 参考)
+    var dist = 1.0;
+
+    var posL = this._leftDoor.getLocalPosition();
+    posL.z = this._doorInitZ_L + this._doorProgress * dist;
+    this._leftDoor.setLocalPosition(posL);
+
+    var posR = this._rightDoor.getLocalPosition();
+    posR.z = this._doorInitZ_R - this._doorProgress * dist;
+    this._rightDoor.setLocalPosition(posR);
+
+    // 动画完成停止计算
+    if (this._doorProgress === 0 || this._doorProgress === 1) {
+        this._doorDir = 0;
+    }
 };
 
 /* ---------- Plane 标签系统 ---------- */
@@ -499,7 +576,7 @@ RobotPathMove.prototype._initChartScreen = function(meshInstance) {
     // 2️⃣ 初始化数据
     this._chartData = [];
     this._chartTitle = '实时数据监控:';
-    
+
     var now = Date.now();
     var lastVal = 50;
     for (var i = 9; i >= 0; i--) {
@@ -535,13 +612,13 @@ RobotPathMove.prototype._initChartScreen = function(meshInstance) {
         if(y<minY) minY=y; if(y>maxY) maxY=y;
         if(z<minZ) minZ=z; if(z>maxZ) maxZ=z;
     }
-    
+
     var width = maxX - minX;
     var height = maxY - minY;
     var depth = maxZ - minZ;
-    
+
     console.log("Original Mesh AABB:", width, height, depth);
-    
+
     // 创建一个新的 Entity 作为屏幕显示层
     var screenPlane = new pc.Entity("ChartScreenOverlay");
     screenPlane.addComponent('model', {
@@ -549,55 +626,55 @@ RobotPathMove.prototype._initChartScreen = function(meshInstance) {
         castShadows: false,
         receiveShadows: false
     });
-    
+
     // 挂载到原来的节点下
     meshInstance.node.addChild(screenPlane);
-    
+
     // 定位到 AABB 中心
     var centerX = (minX + maxX) / 2;
     var centerY = (minY + maxY) / 2;
     var centerZ = (minZ + maxZ) / 2;
     screenPlane.setLocalPosition(centerX, centerY, centerZ);
-    
+
     // 调整旋转和缩放
     // 根据之前的日志，是一个 XY 平面 (width=1.8, height=1.2, depth=0.15)
     // Plane 默认是 XZ 平面，法线朝上 (+Y)
     // 我们需要把它立起来，变成 XY 平面，法线朝前 (+Z) -> 绕 X 轴旋转 90 度
     screenPlane.setLocalEulerAngles(90, 0, 0);
-    
+
     // 缩放：Plane 默认 1x1
     // X 对应 width, Z (原Y) 对应 height
     screenPlane.setLocalScale(width, 1, height);
-    
+
     // 稍微往前挪一点点，防止 Z-fighting (虽然我们要隐藏原 Mesh，但为了保险)
-    screenPlane.translateLocal(0, 0.01, 0); 
-    
+    screenPlane.translateLocal(0, 0.01, 0);
+
     // 隐藏原来的 MeshInstance
     meshInstance.visible = false;
-    
+
     console.log("Created Overlay Plane at", centerX, centerY, centerZ, "Size:", width, height);
 
     // 5️⃣ 给材质赋值
     console.log("Setting material textures. Texture:", tex);
-    
+
     // 创建材质
     var newMat = new pc.StandardMaterial();
     newMat.name = "ChartMaterial_ECharts";
-    
+
     newMat.diffuseMap = tex;
     newMat.diffuse = new pc.Color(1, 1, 1);
-    
+
     newMat.emissiveMap = tex;
     newMat.emissive = new pc.Color(1, 1, 1);
-    
+
     newMat.useLighting = false; // 自发光不需要光照
     newMat.cull = pc.CULLFACE_NONE; // 双面渲染
-    
+
     newMat.update();
-    
+
     // 赋值给新 Plane
     screenPlane.model.material = newMat;
-    
+
     console.log("Assigned ECharts material to Overlay Plane.");
 
     // 6️⃣ 首次渲染
@@ -715,10 +792,10 @@ RobotPathMove.prototype._generatePlaneUV = function (meshInstance) {
 
     var positions = [];
     mesh.getPositions(positions);
-    
+
     var normals = [];
     mesh.getNormals(normals);
-    
+
     var uvs = [];
 
     // 1. 计算 AABB
@@ -730,7 +807,7 @@ RobotPathMove.prototype._generatePlaneUV = function (meshInstance) {
         var x = positions[i * 3 + 0];
         var y = positions[i * 3 + 1];
         var z = positions[i * 3 + 2];
-        
+
         if (x < minX) minX = x;
         if (x > maxX) maxX = x;
         if (y < minY) minY = y;
@@ -748,7 +825,7 @@ RobotPathMove.prototype._generatePlaneUV = function (meshInstance) {
     // 2. 判断主平面方向 (投影到变化最大的两个轴)
     // 默认 XY
     var uAxis = 0; // 0:x, 1:y, 2:z
-    var vAxis = 1; 
+    var vAxis = 1;
     var minU = minX, maxU = maxX;
     var minV = minY, maxV = maxY;
 
@@ -777,7 +854,7 @@ RobotPathMove.prototype._generatePlaneUV = function (meshInstance) {
 
     var width = maxU - minU;
     var height = maxV - minV;
-    
+
     console.log("UV Bounds - minU:", minU, "maxU:", maxU, "minV:", minV, "maxV:", maxV);
     console.log("UV Dimensions - width:", width, "height:", height);
 
@@ -794,7 +871,7 @@ RobotPathMove.prototype._generatePlaneUV = function (meshInstance) {
         var v = (vVal - minV) / height;
         uvs.push(u);
         uvs.push(v);
-        
+
         if (i < 5) console.log("UV[", i, "]:", u, v);
     }
 
@@ -810,11 +887,11 @@ RobotPathMove.prototype._generatePlaneUV = function (meshInstance) {
     newMesh.setPositions(positions);
     newMesh.setUvs(0, uvs);
     console.log("Positions and UVs set.");
-    
+
     if (normals.length > 0) {
         newMesh.setNormals(normals);
     }
-    
+
     // 保留索引
     if (mesh.indexBuffer) {
         var indices = [];
@@ -836,7 +913,7 @@ RobotPathMove.prototype._generatePlaneUV = function (meshInstance) {
 
     newMesh.update();
     console.log("New mesh updated.");
-    
+
     // 替换 MeshInstance 的 mesh
     meshInstance.mesh = newMesh;
     console.log("MeshInstance mesh replaced.");
