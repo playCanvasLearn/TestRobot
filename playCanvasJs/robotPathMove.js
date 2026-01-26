@@ -162,8 +162,7 @@ RobotPathMove.prototype.initialize = function () {
         this._updateLabel(this.path[0].showMessage);
     }
 
-    this.screenPlane = this.app.root.findByName('屏幕');
-    this._initChartScreen();
+    this._initChartScreen(this.screenMaterial);
 };
 
 /* =========================================================
@@ -452,9 +451,11 @@ RobotPathMove.prototype._getBgColor = function (text) {
     return 'rgba(0,0,0,0.65)';
 };
 
-RobotPathMove.prototype._initChartScreen = function () {
+// 初始化屏幕材质
+RobotPathMove.prototype._initChartScreen = function(screenMaterial) {
 
-    /* ---------- Canvas ---------- */
+    this.screenMaterial = this.app.root.findByName('屏幕');
+    // 1️⃣ 创建隐藏 Canvas
     var canvas = document.createElement('canvas');
     canvas.width = 512;
     canvas.height = 256;
@@ -462,22 +463,9 @@ RobotPathMove.prototype._initChartScreen = function () {
     document.body.appendChild(canvas);
 
     this._chartCanvas = canvas;
+    this._chartInstance = echarts.init(canvas);
 
-    /* ---------- ECharts ---------- */
-    this._chart = echarts.init(canvas, null, { renderer: 'canvas' });
-
-    this._chartData = [];
-    this._chartTitle = '实时数据监控';
-
-    var now = Date.now();
-    for (var i = 9; i >= 0; i--) {
-        this._chartData.push({
-            time: now - i * 5000,
-            value: Math.random() * 100
-        });
-    }
-
-    /* ---------- PlayCanvas Texture ---------- */
+    // 2️⃣ 创建 Texture
     var tex = new pc.Texture(this.app.graphicsDevice, {
         format: pc.PIXELFORMAT_R8_G8_B8_A8,
         autoMipmap: false
@@ -485,76 +473,41 @@ RobotPathMove.prototype._initChartScreen = function () {
     tex.setSource(canvas);
     this._chartTexture = tex;
 
-    this._updateChartOption();
-    /* ---------- 材质（屏幕 / UI） ---------- */
-    var mat = new pc.StandardMaterial();
-    mat.emissiveMap = tex;
-    mat.emissive.set(1, 1, 1);
-    mat.emissiveIntensity = 1;
-
-    mat.opacity = 1;
-    mat.blendType = pc.BLEND_NORMAL;
-    mat.depthWrite = false;
-    mat.cull = pc.CULLFACE_NONE;
-    mat.update();
-
-    /* ---------- 绑定到 Plane ---------- */
-    var model = this.screenPlane.render || this.screenPlane.model;
-    if (!model) {
-        console.error('[Chart] screenPlane 没有 render/model');
-        return;
+    // 检查 UV
+    if (!this._hasUV(screenMaterial)) {
+        this._generatePlaneUV(screenMaterial);
     }
-    model.material = mat;
+    // 3️⃣ 给材质赋值
+    screenMaterial.diffuseMap = tex;
+    screenMaterial.opacityMap = tex;
+    screenMaterial.opacity = 1;
+    screenMaterial.blendType = pc.BLEND_NORMAL;
+    screenMaterial.update();
 
-    this._chartTimer = 0;
+    // 4️⃣ 初始化数据
+    this._chartData = [];
 };
 
-RobotPathMove.prototype._updateChartOption = function () {
 
-    var formatted = this._chartData.map(function (item) {
-        return {
-            time: new Date(item.time).toLocaleTimeString('zh-CN', { hour12: false }),
-            value: Number(item.value).toFixed(2)
-        };
-    });
+RobotPathMove.prototype._updateChartOption = function() {
+    if (!this._chartInstance || !this._chartTexture) return;
+
+    // 更新数据
+    this._chartData.push(Math.random() * 100);
+    if (this._chartData.length > 10) this._chartData.shift();
 
     var option = {
-        title: {
-            text: this._chartTitle,
-            textStyle: { color: '#fff', fontSize: 14 },
-            left: '10%',
-            top: '10%'
-        },
-        tooltip: {
-            trigger: 'axis',
-            textStyle: { color: '#fff' },
-            backgroundColor: 'rgba(0,0,0,0.3)'
-        },
-        xAxis: {
-            type: 'category',
-            data: formatted.map(d => d.time),
-            axisLine: { lineStyle: { color: '#fff' } },
-            axisLabel: { color: '#fff', fontSize: 10, rotate: 45 }
-        },
-        yAxis: {
-            type: 'value',
-            axisLine: { lineStyle: { color: '#fff' } },
-            axisLabel: { color: '#fff' },
-            splitLine: { show: false }
-        },
-        series: [{
-            type: 'line',
-            smooth: true,
-            data: formatted.map(d => d.value),
-            lineStyle: { color: '#00ff00' },
-            itemStyle: { color: '#00ff00' }
-        }],
-        backgroundColor: 'rgba(0,0,0,0.25)',
-        grid: { left: '12%', right: '10%', top: '30%', bottom: '35%' }
+        xAxis: { type: 'category', data: this._chartData.map((v,i)=>i) },
+        yAxis: { type: 'value' },
+        series: [{ type: 'line', data: this._chartData }]
     };
 
-    this._chart.setOption(option, true);
-    this._chartTexture.upload(); // ★ GPU 同步
+    // 更新 echarts
+    this._chartInstance.setOption(option, true);
+
+    // 刷新材质贴图
+    this._chartTexture.setSource(this._chartCanvas);
+    this._chartTexture.upload();
 };
 
 RobotPathMove.prototype._updateChart = function (dt) {
@@ -577,3 +530,46 @@ RobotPathMove.prototype._updateChart = function (dt) {
         this._updateChartOption();
     }
 }
+
+/* ==================== 检查 UV ==================== */
+RobotPathMove.prototype._hasUV = function (mesh) {
+    var vb = mesh.vertexBuffer;
+    var fmt = vb.format;
+    return fmt.elements.some(e => e.name === pc.SEMANTIC_TEXCOORD0);
+};
+
+/* ==================== 生成平面 UV ==================== */
+RobotPathMove.prototype._generatePlaneUV = function (mesh) {
+    var vb = mesh.vertexBuffer;
+    var numVerts = vb.numVertices;
+
+    var positions = vb.getData(pc.SEMANTIC_POSITION);
+    var uvArray = new Float32Array(numVerts * 2);
+
+    var minX = Infinity, maxX = -Infinity;
+    var minY = Infinity, maxY = -Infinity;
+    for (var i = 0; i < numVerts; i++) {
+        var x = positions[i * 3 + 0];
+        var y = positions[i * 3 + 1];
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+    }
+    var width = maxX - minX;
+    var height = maxY - minY;
+
+    for (var i = 0; i < numVerts; i++) {
+        var x = positions[i * 3 + 0];
+        var y = positions[i * 3 + 1];
+        uvArray[i * 2 + 0] = (x - minX) / width;
+        uvArray[i * 2 + 1] = (y - minY) / height;
+    }
+
+    var uvBuffer = new pc.VertexBuffer(mesh.device, new pc.VertexFormat([
+        { semantic: pc.SEMANTIC_TEXCOORD0, components: 2, type: pc.TYPE_FLOAT32 }
+    ]), numVerts);
+
+    uvBuffer.setData(uvArray);
+    mesh.setVertexBuffer(uvBuffer, pc.SEMANTIC_TEXCOORD0);
+};
