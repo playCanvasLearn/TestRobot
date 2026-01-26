@@ -162,7 +162,23 @@ RobotPathMove.prototype.initialize = function () {
         this._updateLabel(this.path[0].showMessage);
     }
 
-    this._initChartScreen(this.screenMaterial);
+    this._chartTimer = 0;
+    var screenEntity = this.app.root.findByName('屏幕');
+    if (screenEntity) {
+        var meshInstances = screenEntity.render ? screenEntity.render.meshInstances : (screenEntity.model ? screenEntity.model.meshInstances : []);
+        if (meshInstances.length > 0) {
+            // 尝试查找名称包含 "Screen" 或 "屏幕" 的材质，或者根据名称猜测
+            // 如果没有明确名称，可能需要进一步判断，暂时默认找第一个不是支架的（如果能区分）
+            // 或者对所有 meshInstances 进行遍历判断
+            var targetMeshInstance = meshInstances[0];
+            
+            // 简单 heuristic: 假设屏幕面板的材质名字可能特殊
+            // 但如果导入的模型没有命名好，可能比较难。
+            // 为了安全起见，克隆材质是必须的。
+            
+            this._initChartScreen(targetMeshInstance);
+        }
+    }
 };
 
 /* =========================================================
@@ -452,9 +468,15 @@ RobotPathMove.prototype._getBgColor = function (text) {
 };
 
 // 初始化屏幕材质
-RobotPathMove.prototype._initChartScreen = function(screenMaterial) {
+RobotPathMove.prototype._initChartScreen = function(meshInstance) {
+    if (!meshInstance) return;
 
-    this.screenMaterial = this.app.root.findByName('屏幕');
+    // ⚠️ 克隆材质，防止影响共用材质的其他部件（如支架）
+    var material = meshInstance.material.clone();
+    meshInstance.material = material;
+
+    var mesh = meshInstance.mesh;
+
     // 1️⃣ 创建隐藏 Canvas
     var canvas = document.createElement('canvas');
     canvas.width = 512;
@@ -463,43 +485,104 @@ RobotPathMove.prototype._initChartScreen = function(screenMaterial) {
     document.body.appendChild(canvas);
 
     this._chartCanvas = canvas;
-    this._chartInstance = echarts.init(canvas);
+    this._chartInstance = echarts.init(canvas, null, { renderer: 'canvas' });
 
-    // 2️⃣ 创建 Texture
+    // 2️⃣ 初始化数据
+    this._chartData = [];
+    this._chartTitle = '实时数据监控:';
+    
+    var now = Date.now();
+    for (var i = 9; i >= 0; i--) {
+        this._chartData.push({
+            time: now - i * 5000,
+            value: Math.random() * 100
+        });
+    }
+
+    // 3️⃣ 创建 Texture
     var tex = new pc.Texture(this.app.graphicsDevice, {
         format: pc.PIXELFORMAT_R8_G8_B8_A8,
-        autoMipmap: false
+        autoMipmap: false,
+        minFilter: pc.FILTER_LINEAR,
+        magFilter: pc.FILTER_LINEAR,
+        addressU: pc.ADDRESS_CLAMP_TO_EDGE,
+        addressV: pc.ADDRESS_CLAMP_TO_EDGE
     });
     tex.setSource(canvas);
     this._chartTexture = tex;
 
-    // 检查 UV
-    if (!this._hasUV(screenMaterial)) {
-        this._generatePlaneUV(screenMaterial);
+    // 4️⃣ 检查并生成 UV
+    if (!this._hasUV(mesh)) {
+        this._generatePlaneUV(meshInstance);
     }
-    // 3️⃣ 给材质赋值
-    screenMaterial.diffuseMap = tex;
-    screenMaterial.opacityMap = tex;
-    screenMaterial.opacity = 1;
-    screenMaterial.blendType = pc.BLEND_NORMAL;
-    screenMaterial.update();
 
-    // 4️⃣ 初始化数据
-    this._chartData = [];
+    // 5️⃣ 给材质赋值
+    material.diffuseMap = tex;
+    // 使用 emissive 可以让屏幕在暗处也发光，类似显示器
+    material.emissiveMap = tex; 
+    
+    // 设置基础颜色为黑色，避免叠加变白
+    material.diffuse = new pc.Color(0, 0, 0);
+    material.emissive = new pc.Color(1, 1, 1);
+    material.specular = new pc.Color(0, 0, 0); // 去掉反光
+    
+    material.useLighting = false; // 不受光照影响
+    material.update();
+
+    // 6️⃣ 首次渲染
+    this._updateChartOption();
 };
 
 
 RobotPathMove.prototype._updateChartOption = function() {
     if (!this._chartInstance || !this._chartTexture) return;
 
-    // 更新数据
-    this._chartData.push(Math.random() * 100);
-    if (this._chartData.length > 10) this._chartData.shift();
+    // 格式化数据
+    var formattedData = this._chartData.map(function(item) {
+        var date = new Date(item.time);
+        var h = date.getHours().toString().padStart(2, '0');
+        var m = date.getMinutes().toString().padStart(2, '0');
+        var s = date.getSeconds().toString().padStart(2, '0');
+        return {
+            time: h + ':' + m + ':' + s,
+            value: Number(item.value).toFixed(2)
+        };
+    });
 
     var option = {
-        xAxis: { type: 'category', data: this._chartData.map((v,i)=>i) },
-        yAxis: { type: 'value' },
-        series: [{ type: 'line', data: this._chartData }]
+        title: {
+            text: this._chartTitle,
+            textStyle: { color: '#fff', fontSize: 14 },
+            left: '10%',
+            top: '20%'
+        },
+        tooltip: {
+            trigger: 'axis',
+            textStyle: { color: '#fff' },
+            backgroundColor: 'rgba(0,0,0,0.2)'
+        },
+        xAxis: {
+            type: 'category',
+            data: formattedData.map(function(item){ return item.time; }),
+            axisLine: { lineStyle: { color: '#fff' } },
+            axisLabel: { color: '#fff', fontSize: 10, rotate: 45 }
+        },
+        yAxis: {
+            type: 'value',
+            axisLine: { lineStyle: { color: '#fff' } },
+            axisLabel: { color: '#fff' },
+            splitLine: { show: false }
+        },
+        series: [{
+            data: formattedData.map(function(item){ return item.value; }),
+            type: 'line',
+            smooth: true,
+            lineStyle: { color: '#00ff00' },
+            itemStyle: { color: '#00ff00' }
+        }],
+        backgroundColor: '#000000',
+        grid: { left: '12%', right: '10%', top: '30%', bottom: '35%' },
+        animation: false
     };
 
     // 更新 echarts
@@ -512,7 +595,7 @@ RobotPathMove.prototype._updateChartOption = function() {
 
 RobotPathMove.prototype._updateChart = function (dt) {
     /* === 图表刷新 === */
-    if (!this._chart) return;
+    if (!this._chartInstance) return;
 
     this._chartTimer += dt;
     if (this._chartTimer >= 5) {
@@ -539,37 +622,106 @@ RobotPathMove.prototype._hasUV = function (mesh) {
 };
 
 /* ==================== 生成平面 UV ==================== */
-RobotPathMove.prototype._generatePlaneUV = function (mesh) {
-    var vb = mesh.vertexBuffer;
-    var numVerts = vb.numVertices;
+RobotPathMove.prototype._generatePlaneUV = function (meshInstance) {
+    var mesh = meshInstance.mesh;
+    var numVerts = mesh.vertexBuffer.numVertices;
 
-    var positions = vb.getData(pc.SEMANTIC_POSITION);
-    var uvArray = new Float32Array(numVerts * 2);
+    var positions = [];
+    mesh.getPositions(positions);
+    
+    var normals = [];
+    mesh.getNormals(normals);
+    
+    var uvs = [];
 
+    // 1. 计算 AABB
     var minX = Infinity, maxX = -Infinity;
     var minY = Infinity, maxY = -Infinity;
+    var minZ = Infinity, maxZ = -Infinity;
+
     for (var i = 0; i < numVerts; i++) {
         var x = positions[i * 3 + 0];
         var y = positions[i * 3 + 1];
+        var z = positions[i * 3 + 2];
+        
         if (x < minX) minX = x;
         if (x > maxX) maxX = x;
         if (y < minY) minY = y;
         if (y > maxY) maxY = y;
+        if (z < minZ) minZ = z;
+        if (z > maxZ) maxZ = z;
     }
-    var width = maxX - minX;
-    var height = maxY - minY;
 
+    var dx = maxX - minX;
+    var dy = maxY - minY;
+    var dz = maxZ - minZ;
+
+    console.log("Mesh AABB:", dx, dy, dz);
+
+    // 2. 判断主平面方向 (投影到变化最大的两个轴)
+    // 默认 XY
+    var uAxis = 0; // 0:x, 1:y, 2:z
+    var vAxis = 1; 
+    var minU = minX, maxU = maxX;
+    var minV = minY, maxV = maxY;
+
+    if (dx >= dy && dz >= dy) {
+        // XZ 平面 (如地面)
+        console.log("Generating UV for XZ plane");
+        uAxis = 0; // x
+        vAxis = 2; // z
+        minU = minX; maxU = maxX;
+        minV = minZ; maxV = maxZ;
+    } else if (dy >= dx && dz >= dx) {
+        // YZ 平面 (侧面)
+        console.log("Generating UV for YZ plane");
+        uAxis = 2; // z
+        vAxis = 1; // y
+        minU = minZ; maxU = maxZ;
+        minV = minY; maxV = maxY;
+    } else {
+        // XY 平面 (正面)
+        console.log("Generating UV for XY plane");
+        uAxis = 0; // x
+        vAxis = 1; // y
+        minU = minX; maxU = maxX;
+        minV = minY; maxV = maxY;
+    }
+
+    var width = maxU - minU;
+    var height = maxV - minV;
+    
+    if (width < 0.0001) width = 1;
+    if (height < 0.0001) height = 1;
+
+    // 3. 生成 UV
     for (var i = 0; i < numVerts; i++) {
-        var x = positions[i * 3 + 0];
-        var y = positions[i * 3 + 1];
-        uvArray[i * 2 + 0] = (x - minX) / width;
-        uvArray[i * 2 + 1] = (y - minY) / height;
+        var uVal = positions[i * 3 + uAxis];
+        var vVal = positions[i * 3 + vAxis];
+
+        // 简单的归一化映射，如果发现倒了可能需要 1.0 - ...
+        uvs.push((uVal - minU) / width);
+        uvs.push((vVal - minV) / height);
     }
 
-    var uvBuffer = new pc.VertexBuffer(mesh.device, new pc.VertexFormat([
-        { semantic: pc.SEMANTIC_TEXCOORD0, components: 2, type: pc.TYPE_FLOAT32 }
-    ]), numVerts);
+    // 创建新 Mesh，确保包含 UV 语义
+    var newMesh = new pc.Mesh(mesh.device);
+    newMesh.setPositions(positions);
+    newMesh.setUvs(0, uvs);
+    
+    if (normals.length > 0) {
+        newMesh.setNormals(normals);
+    }
+    
+    // 保留索引
+    if (mesh.indexBuffer) {
+        var indices = [];
+        mesh.getIndices(indices);
+        newMesh.setIndices(indices);
+    }
 
-    uvBuffer.setData(uvArray);
-    mesh.setVertexBuffer(uvBuffer, pc.SEMANTIC_TEXCOORD0);
+    newMesh.update();
+    
+    // 替换 MeshInstance 的 mesh
+    meshInstance.mesh = newMesh;
 };
