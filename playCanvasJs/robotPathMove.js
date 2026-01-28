@@ -31,6 +31,8 @@ RobotPathMove.prototype.initialize = function () {
      * - position：目标位置
      * - lookAt：到点后或 pause 时朝向的位置
      * - turn === 'pause' 表示停留节点
+     * - 左边  z轴 正方向
+     * - 里面  x轴 负方向
      */
     this.path = [
         { showMessage: '去拿料', turn: '', position: { x: 1.7, y: 0, z: 0 }, lookAt: { x: 1.7, y: 0, z: 0.336 } },
