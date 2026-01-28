@@ -38829,7 +38829,6 @@ RotateSceneWithZoom.attributes.add("rotateSensitivity", {
 
 
 
-
 // 创建 PlayCanvas 脚本：机器人沿路径移动
 var RobotPathMove = pc.createScript('robotPathMove');
 
@@ -38881,7 +38880,7 @@ RobotPathMove.prototype.initialize = function () {
         { showMessage: '去加工', turn: '', position: { x: 1.7, y: 0, z: 0.5 }, lookAt: { x: 1.7, y: 0, z: -1.3 } },
         { showMessage: '去加工', turn: '', position: { x: 1.7, y: 0, z: -1.1 }, lookAt: { x: 1.7, y: 0, z: -1.3 } },
         { showMessage: '去加工', turn: '', position: { x: 1.7, y: 0, z: -1.1 }, lookAt: { x: 0.4, y: 0, z: -1.3 } },
-        { showMessage: '去加工', turn: '', position: { x: 0.4, y: 0, z: -0.9 }, lookAt: { x: 0.4, y: 0, z: -0.9 } },
+        { showMessage: '加工中', turn: '', position: { x: 0.4, y: 0, z: -0.9 }, lookAt: { x: 0.4, y: 0, z: -0.9 } },
         { showMessage: '加工中', turn: 'pause', position: { x: 0.4, y: 0, z: -0.9 }, lookAt: { x: 0.4, y: 0, z: -0.9 } },
         { showMessage: '加工中', turn: 'openDoor', position: { x: 0.4, y: 0, z: -0.9 }, lookAt: { x: 0.4, y: 0, z: -0.9 } },
         { showMessage: '加工中', turn: 'take', position: { x: 0.4, y: 0, z: -0.9 }, lookAt: { x: 0.4, y: 0, z: -0.9 } },
@@ -38924,7 +38923,7 @@ RobotPathMove.prototype.initialize = function () {
         { showMessage: '放料中', turn: '', position: { x: -1.2, y: 0, z: 4.5 }, lookAt: { x: -1.3, y: 0, z: 4.5 } },
         { showMessage: '去拿料', turn: '', position: { x: -1.3, y: 0, z: 4.5 }, lookAt: { x: -1.3, y: 0, z: 2.7 } },
         { showMessage: '去拿料', turn: '', position: { x: -1.3, y: 0, z: 2.7 }, lookAt: { x: 1.8, y: 0, z: 2.5 } },
-        { showMessage: '去拿料', turn: '', position: { x: 1.8, y: 0, z: 2.5 }, lookAt: { x: 1.8, y: 0, z: 4.5 } } */
+        { showMessage: '去拿料', turn: '', position: { x: 1.8, y: 0, z: 2.5 }, lookAt: { x: 1.8, y: 0, z: 4.5 } } /**/
     ];
 
     // 当前路径索引
@@ -39182,12 +39181,12 @@ RobotPathMove.prototype.update = function (dt) {
 
     this.entity.setPosition(pos);
 
-    // 朝向同步
-    this.updateMoveRotation(dt);
+    // 朝向同步 (完全根据 lookAt 设定，与移动方向无关)
+    this.updateLookAt(node, dt);
 };
 
 /* =========================================================
- * 移动时的朝向控制（面向移动方向）
+ * 移动时的朝向控制（面向移动方向）- 已弃用，改用 updateLookAt
  * ========================================================= */
 RobotPathMove.prototype.updateMoveRotation = function (dt) {
 
@@ -39218,8 +39217,7 @@ RobotPathMove.prototype.updateMoveRotation = function (dt) {
  * pause 节点的 lookAt 朝向控制
  * ========================================================= */
 RobotPathMove.prototype.updateLookAt = function (node, dt) {
-    var dir = this._moveDir;
-    if (dir.lengthSq() === 0) return;
+    // 移除对 moveDir 的依赖，完全基于 lookAt 点
     var pos = this.entity.getPosition();
     var look = node.lookAt;
 
@@ -39234,7 +39232,8 @@ RobotPathMove.prototype.updateLookAt = function (node, dt) {
 
     this._lookDir.normalize();
 
-    this._targetAngle =  Math.atan2(dir.x, dir.z) * pc.math.RAD_TO_DEG;
+    // 使用 lookDir 计算目标角度
+    this._targetAngle = Math.atan2(this._lookDir.x, this._lookDir.z) * pc.math.RAD_TO_DEG;
 
     this._angle = pc.math.lerpAngle(this._angle, this._targetAngle, 0.15);
 
