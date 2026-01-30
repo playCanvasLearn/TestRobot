@@ -154,6 +154,7 @@ RobotPathMove.prototype.initialize = function () {
      * 创建一个目标点可视化 Marker
      * 方便在场景中看到当前移动目标
      */
+/*
     this._targetMarker = new pc.Entity('TargetMarker');
     this._targetMarker.addComponent('model', { type: 'box' });
     this._targetMarker.setLocalScale(0.3, 0.3, 0.3);
@@ -175,6 +176,7 @@ RobotPathMove.prototype.initialize = function () {
 
     var sceneRoot = this.app.root.findByName('SceneRoot');
     (sceneRoot || this.app.root).addChild(this._targetLookMarker);
+*/
 
     // Animator 组件
     this._anim = this.entity.anim || (this.animEntity && this.animEntity.anim);
@@ -240,7 +242,7 @@ RobotPathMove.prototype.update = function (dt) {
     var node = this.path[this._index];
     var target = node.position;
 
-    var pos = this.entity.getPosition();
+    var pos = this.entity.getLocalPosition();
 
     /* === 标签文字切换 === */
     if (node.showMessage !== this._lastMessage) {
@@ -254,7 +256,7 @@ RobotPathMove.prototype.update = function (dt) {
 
     /* === Billboard === */
     if (this.labelPlane && this._camera) {
-        //this.labelPlane.lookAt(this._camera.getPosition());
+        //this.labelPlane.lookAt(this._camera.getLocalPosition());
         //this.labelPlane.setLocalPosition(0, this.labelOffsetY, 0);
     }
     // ===== pause 节点：walk → idle（纯停留）=====
@@ -310,13 +312,13 @@ RobotPathMove.prototype.update = function (dt) {
     );
 
     // 更新可视化 Marker
-    if (this._targetMarker) {
-        this._targetMarker.setPosition(target.x, target.y, target.z);
+/*    if (this._targetMarker) {
+        this._targetMarker.setLocalPosition(target.x, target.y, target.z);
     }
     if (this._targetLookMarker) {
         var look = node.lookAt;
-        this._targetLookMarker.setPosition(look.x, look.y, look.z);
-    }
+        this._targetLookMarker.setLocalPosition(look.x, look.y, look.z);
+    }*/
 
     var dist = this._moveDir.length();
 
@@ -324,7 +326,7 @@ RobotPathMove.prototype.update = function (dt) {
     if (dist <= this.arriveDistance) {
 
         // 精确贴点
-        this.entity.setPosition(
+        this.entity.setLocalPosition(
             target.x,
             target.y,
             target.z
@@ -347,7 +349,7 @@ RobotPathMove.prototype.update = function (dt) {
     pos.x += this._moveDir.x * step;
     pos.z += this._moveDir.z * step;
 
-    this.entity.setPosition(pos);
+    this.entity.setLocalPosition(pos);
 
     // 朝向同步 (完全根据 lookAt 设定，与移动方向无关)
     this.updateLookAt(node, dt);
@@ -386,7 +388,7 @@ RobotPathMove.prototype.updateMoveRotation = function (dt) {
  * ========================================================= */
 RobotPathMove.prototype.updateLookAt = function (node, dt) {
     // 移除对 moveDir 的依赖，完全基于 lookAt 点
-    var pos = this.entity.getPosition();
+    var pos = this.entity.getLocalPosition();
     var look = node.lookAt;
 
     // 计算朝向向量（XZ 平面）
@@ -885,7 +887,7 @@ RobotPathMove.prototype._generatePlaneUV = function (meshInstance) {
     }
 
     var newMesh = new pc.Mesh(device);
-    newMesh.setPositions(positions);
+    newMesh.setLocalPositions(positions);
     newMesh.setUvs(0, uvs);
     console.log("Positions and UVs set.");
 
