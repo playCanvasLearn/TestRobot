@@ -154,29 +154,29 @@ RobotPathMove.prototype.initialize = function () {
      * 创建一个目标点可视化 Marker
      * 方便在场景中看到当前移动目标
      */
-/*
-    this._targetMarker = new pc.Entity('TargetMarker');
-    this._targetMarker.addComponent('model', { type: 'box' });
-    this._targetMarker.setLocalScale(0.3, 0.3, 0.3);
+    /*
+        this._targetMarker = new pc.Entity('TargetMarker');
+        this._targetMarker.addComponent('model', { type: 'box' });
+        this._targetMarker.setLocalScale(0.3, 0.3, 0.3);
 
-    var sceneRoot = this.app.root.findByName('SceneRoot');
-    (sceneRoot || this.app.root).addChild(this._targetMarker);
+        var sceneRoot = this.app.root.findByName('SceneRoot');
+        (sceneRoot || this.app.root).addChild(this._targetMarker);
 
-    this._targetLookMarker = new pc.Entity('TargetLookMarker');
-    this._targetLookMarker.addComponent('model', { type: 'sphere' });
-    this._targetLookMarker.setLocalScale(0.3, 0.3, 0.3);
+        this._targetLookMarker = new pc.Entity('TargetLookMarker');
+        this._targetLookMarker.addComponent('model', { type: 'sphere' });
+        this._targetLookMarker.setLocalScale(0.3, 0.3, 0.3);
 
-    // 创建红色材质
-    var redMat = new pc.StandardMaterial();
-    redMat.diffuse.set(1, 0, 0); // 红色
-    redMat.update();
+        // 创建红色材质
+        var redMat = new pc.StandardMaterial();
+        redMat.diffuse.set(1, 0, 0); // 红色
+        redMat.update();
 
-    // 应用材质
-    this._targetLookMarker.model.material = redMat;
+        // 应用材质
+        this._targetLookMarker.model.material = redMat;
 
-    var sceneRoot = this.app.root.findByName('SceneRoot');
-    (sceneRoot || this.app.root).addChild(this._targetLookMarker);
-*/
+        var sceneRoot = this.app.root.findByName('SceneRoot');
+        (sceneRoot || this.app.root).addChild(this._targetLookMarker);
+    */
 
     // Animator 组件
     this._anim = this.entity.anim || (this.animEntity && this.animEntity.anim);
@@ -312,13 +312,13 @@ RobotPathMove.prototype.update = function (dt) {
     );
 
     // 更新可视化 Marker
-/*    if (this._targetMarker) {
-        this._targetMarker.setLocalPosition(target.x, target.y, target.z);
-    }
-    if (this._targetLookMarker) {
-        var look = node.lookAt;
-        this._targetLookMarker.setLocalPosition(look.x, look.y, look.z);
-    }*/
+    /*    if (this._targetMarker) {
+            this._targetMarker.setLocalPosition(target.x, target.y, target.z);
+        }
+        if (this._targetLookMarker) {
+            var look = node.lookAt;
+            this._targetLookMarker.setLocalPosition(look.x, look.y, look.z);
+        }*/
 
     var dist = this._moveDir.length();
 
@@ -901,10 +901,10 @@ RobotPathMove.prototype._generatePlaneUV = function (meshInstance) {
         mesh.getIndices(indices);
         // Fallback if getIndices didn't populate the array (some versions return it)
         if (indices.length === 0) {
-             var returnedIndices = mesh.getIndices();
-             if (returnedIndices && returnedIndices.length > 0) {
-                 indices = returnedIndices;
-             }
+            var returnedIndices = mesh.getIndices();
+            if (returnedIndices && returnedIndices.length > 0) {
+                indices = returnedIndices;
+            }
         }
         console.log("Indices count:", indices.length);
         newMesh.setIndices(indices);
